@@ -1,0 +1,38 @@
+west = gold base
+east = red base
+
+Path 0 = gold flag to south gold hallway to south red hallway to red flag
+        Nodes = 5 159 36 160 161 162 42 163 169
+        Intersections = 36 161 42 169
+Path 1 = red flag to north red hallway to north gold hallway to gold flag
+        Nodes = 4 164 43 165 166 167 37 168 170
+        Intersections = 43 166 37 170
+Path 2 = red flag, jump up to platform, through hallway to 2F center area
+        Nodes = 169 171 172 173 174
+        Intersections = 169 174
+Path 3 = gold flag, jump up to platform, through hallway to 2F center area
+        Nodes = 170 177 178 179 180
+        Intersections = 170 180
+Path 4 = south hallway, across 2F bridge in center area, to north hallway
+        Nodes = 161 18 183 19 166
+        Intersections = 161 18 19 166
+Path 5 = loop around 2F center area (loop at south doorway, counterclockwise - S, E/red, N, W/gold, S)
+        Nodes = 18 184 174 185 19 186 180 187 18
+        Intersections = 18 174 19 180
+Path 6 = north red hallway, through 1F red doorway, through 1F middle of center area, through 1F gold doorway, to south gold hallway
+        Nodes = 43 188 189 190 175 36
+        Intersections = 43 188 175 36
+Path 7 = north gold hallway, through 1F gold doorway, along 1F southern wall of center area, through 1F red doorway, to south red hallway
+        Nodes = 37 175 191 192 193 188 42
+        Intersections = 37 175 188 42
+
+
+node fixup
+4 --> 194
+5 --> 195
+18 --> 196
+19 --> 197
+36 --> 198
+37 --> 199
+42 --> 200
+43 --> 201

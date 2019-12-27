@@ -1,0 +1,92 @@
+
+	HOW FAR OUT OF DATE IS THIS FILE?
+	at the very least, I think this first FIXME is OBE
+	I think the cog ref numbers are also out of date
+	dunno about the path defs, priorities, etc. though
+
+FIXME: The gold obervation hallway gold base path ranking needs to be fixed - bots will incorrectly get trapped when coming across the bridge requiring gold/red keys into the gold base
+FIXME: as a result, the red/gold pri rankings need to be recalculated
+	--> interestingly, the key bridge will lead the bots to the fan/pipe entrances first - the SAS doors are beyond where the bots would branch off toward the fan/pipe entrances, although the bots would still choose the SAS doors over the fan/pipe if coming up from the sewers/central area
+
+path 0 / 128 = jump to red flag
+REDPRIORITY 100
+GOLDPRIORITY -1
+	358 457 458
+	intersections = 358
+path 1 / 129 = red base outer hallway / flag room loop
+REDPRIORITY 90
+GOLDPRIORITY 10
+	358 350 351 352 353 354 355 356 357 350 358
+	364 358 359 360 361 362 363 364
+	intersections = 358 354
+	intersections = 358 361 362
+path 2 / 130 = red observation hallway, down pipes into red base outer hallway
+REDPRIORITY 70
+GOLDPRIORITY -1
+	397 398 399 400 401 402 403 404 405 406 354
+	intersections = 397 354
+path 3 / 131 = by elevator in central area, toward red base, up left dual elevator, to red observation hallway
+REDPRIORITY 60
+GOLDPRIORITY 40
+	377 378 379 380 381 382 383 384 385 386 387 388 389 390 391 392 393 394 395 396 397
+	intersections = 377 391 397
+path 4 / 132 = jump to gold flag
+REDPRIORITY -1
+GOLDPRIORITY 100
+	448 459 460
+	intersections = 448
+path 5 / 133 = gold base outer hallway / flag room loop
+REDPRIORITY 10
+GOLDPRIORITY 90
+	442 443 444 445 448 449 450 451 448 445 446 447 442
+	intersections = 442 448 448
+path 6 / 134 = from gold base fan area, down shaft, into gold base outer hallway
+REDPRIORITY -1
+GOLDPRIORITY 80
+	436 456 439 440 441 442
+	intersections = 436 442
+path 7 / 135 = from gold observation hallway to gold base fan area, back to gold observation hallway
+REDPRIORITY -1
+GOLDPRIORITY 70
+	426 434 435 436 437 438 429
+	intersections = 426 436 429
+path 8 / 136 = by elevator in central area, toward gold base, up elevator, through hallway, through gold observation hallway
+REDPRIORITY 40
+GOLDPRIORITY 60
+	377 410 411 412 413 414 415 416 417 418 423 424 425 426 427 428 429
+	intersections = 377 418 426 429
+path 9 / 137 = red base force field control room, down elevators, to red base flag room
+REDPRIORITY -1
+GOLDPRIORITY -1
+	345 346 347 348 349 361
+	intersections = 361
+path 10 / 138 = gold base fan control room, down elevator into gold base flag room
+REDPRIORITY -1
+GOLDPRIORITY -1
+	455 454 453 452 448
+	intersections = 448
+path 11 / 139 = red base flag room by SAS elevator, down to red base sewer, down, through tunnel, up through pipe, up elevator to central area with circular sewer pit between bases
+REDPRIORITY -1
+GOLDPRIORITY 20
+	365 366 367 368 369 373 374 375 376 377
+	intersections = 377
+path 12 / 140 = gold base flag room by SAS elevator, down to gold base sewer, down, through tunnel, up through pipe, up elevator to central area with circular sewer pit between bases
+REDPRIORITY 20
+GOLDPRIORITY -1
+	372 371 370 369 373 374 375 376 377
+	intersections = 377
+path 13 / 141 = gold observation hallway, through gold doors, across bridge, through red doors, to red observation hallway
+REDPRIORITY 50 + REDKEY + GOLDKEY
+GOLDPRIORITY 50 + REDKEY + GOLDKEY
+	429 430 431 432 397
+	intersections = 429 397
+path 14 / 142 = by dual elevators, through red base SAS doors, down elevator into red base flag room
+REDPRIORITY 80 + REDKEY
+GOLDPRIORITY 20 + REDKEY
+	391 407 408 409 362
+	intersections = 391 362
+path 15 / 143 = by elevator heading to gold base, through gold SAS doors, down elevator into gold base flag room
+REDPRIORITY 20 + GOLDKEY
+GOLDPRIORITY 80 + GOLDKEY
+	418 419 420 433 421 422 448
+	intersections = 418 448

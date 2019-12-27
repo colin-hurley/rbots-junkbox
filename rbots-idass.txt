@@ -1,0 +1,122 @@
+TODO	this may eliminate the need for the new nav flags:
+	when bot lost and nav can't find node, start a timer to query nav every second for nearest node
+	stop timer on bot death or nav returning a node
+	separate timer to randomly regenerate a lost wander vector every 3 seconds
+	tbd - lostcount changes
+	--> see lost-bot-cleanup shelve for WIP
+TODO	stretch - mitigate infinite wait for lower elevator near gold sas entrance
+TODO	stretch - nav cog - flag to ignore vertical distance checks when finding node for lost bot
+TODO	stretch - nav cog - flag to ignore LOS, vertical distance checks, etc. if bot and node are in the same sector when finding node for lost bot
+TODO	propagate changes to other levels/episodes, then squash merge back to master
+
+==================== TICKETS ====================
+
+general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
+general - some nodes are too high in existing levels
+general - do bot sabers emit any extra light? if they don't, they should
+general - botcam improvements - eliminate need to switch back to player and then back to bot when bot dies
+general - technical debt - phase out SendMessageEx based API and use triggers instead
+general - is force speed negated by rbot-special 0x2/slow flag?  i.e. when that special effect ends, does the bot return to normal speed instead of force speed?
+
+ctf - technical debt: CTF/botname cogstring collision - CTF uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF levels use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
+
+mots - feature: in team play, use personality skins, not just kyle team skins
+mots - additional force powers (not yet supported by rbots) are still handled in the player cog skill message
+
+duel - bots try to walk through force fields
+
+arena - not all parts of level are pathed yet
+
+challenge - for some reason, the SAS doors don't always work for bots (gold side colored SAS has issues - need to confirm other cases)
+
+bes - bots get stuck under elevators in lower area, usually suicide themselves because they often don't recover
+
+nar - rbot-elev-nar.cog doesn't seem to be used (or complete, for that matter) - delete this file
+nar - bots try to walk through the force field
+nar - change elevator cog to rbot-elev so the elevator returns to bottom frame after use (this better matches the original level behavior)
+	--> alternatively, change to wait for elev and only go up when it is at frame 0 - further, elevator should be activated by switch only (i.e. activate trigger), not simply walking on the elevator
+	--> in other words, smooth out this elevator usage - it's terribly rough right now
+nar - bots try to run the wrong way on the conveyor belts - srv doesn't detect bot obstructed, since the "velocity" (relative to the moving floor) is "good"
+
+valley - elevator use
+
+freezer - item seeking causes bots to jump over/into pits in center area
+freezer - light-up tubes don't light up for bots
+freezer - there was a weird case under the platform by the elevator/windows where the bot wasn't running and could only jump (like the outer catwalk in the gantry level)
+freezer - bots sometimes/often can't properly ride the rising air by the elevators up toward the central area
+freezer - pathing issues in center area - overlapping redundant paths cause bots to turn around sometimes (i.e. nodes 0 and 1 of multiple paths overlap, not just node 0, so bots will randomly change back to previous path one node later)
+
+throne - bots jump over/into pits
+throne - central elevator shaft is a pit and kills bots even when they are on the elevator
+throne - bots enter the elevator shaft when there is no elevator, so they fall into the pit
+
+gantry - outer catwalk hopping, bots can't run on all of the catwalk
+
+spaceport - bots can get temporarily stuck on door leading into stacked crate area
+
+temple - bots sometimes get temporarily stuck behind doorway extruded frames
+
+==================== TICKETS - UNFIXABLE? ====================
+
+general - when bots use force persuasion, player cannot see them (except on overlay map) when using force seeing -- unfortunately, this is probably not easily fixable since the game engine magically reveals applicable invisible players/actors based on whether bin 23 is active or not and this only works if the thing exists at level load time and has the 0x200 actor flag (i.e. similar barrier to actors having dynamic weapon meshes).  Technically, this may be fixable in MotS, but I haven't tested that.
+			--> workaround - there is a hack in the srv force cog to show/hide the bot based on whether bin 23 (force seeing) for the local player is active
+			--> Note: changing bot model apparently resets the geo mode to 4, so the bot is momentarily visible until the next pulse hides it again with geo 0
+
+==================== IDEAS ====================
+
+** Character flags **
+	The character flags params have been removed since the feature was never implemented.
+	Refer to the duel level for example of where it had been configured, even though it wasn't used (it was basically alternating charflags=1,1,2,2,1,1,2,2,... like the force power usage)
+
+	defensive and offensive idea - have path flags entered in rbot-pathinfo-ctf.cog for each path that indicate whether the path is usable for each personality type
+	alternatively, set min/max path ranks that the bot can use
+	really, the bot can use any path, but if it comes across a "preferred" path, it will try to use that instead
+	the idea is to have defensive bots stay close to their own base and offensive close to the opposing base (unless they steal the flag)
+
+** OBE: To ID or not to ID? **
+	It's nice to have stuff work without needing to manage IDs (e.g. path cogs), but it makes some things harder because you would need to deduce the synthesized ID somehow or be given a cog reference number.
+	Manually assigned IDs, although slightly extra work for the developer, are more trigger-friendly and make it easier to reference the cog by its identity rather than as a hard reference number that potentially needs to be converted to an ID for the rest of the system to work.
+	For example, it would be a bit clearer to add rbot-path.cog with id=13 and add rbot-path-special-ctf.cog (or whatever) with id=13, rather than using cog numbers (e.g. cog #83)
+	If ID auto-generation is needed, here's an idea to generate ordered IDs from 0..N-1, given N cogs:
+		In e.g. rbot-path.cog
+			startup:
+			...
+				SendTrigger(-1, 12345, ... GetSelfCog(), ...);
+			...
+			trigger:
+			...
+				if (GetSOurceRef() == 12345) {
+					if (GetSelfCog() > GetParam(...)) id = id + 1;
+		In e.g. rbot-nav.cog
+			trigger:
+			...
+				if (GetSOurceRef() == 12345) {
+					path_count = path_count + 1; // Increment for each path discovered
+			...
+				// for each path
+			...
+					// Ask path with some ID to return info
+					SendTrigger(-1, 12003, path_id, params...)
+
+** Compress path node gaps **
+	It would be nice if the path cogs could automatically "compress" a node list like:
+		-1, -1, 443, 444, 465, -1, 467, -1, ...
+	into a compacted form like:
+		443, 444, 465, 467, -1, ... (path_size = 4)
+	This would alleviate the burden of developers manually compressing path nodes in ZED
+	Example code:
+		path_size = 0; // while iterating, always points to the next open node slot
+		for (i = 0 ; i < 25 ; i = i + 1) {
+			if (node0[i] != -1 && path_size < i) {
+				// There are gaps in the node list, compact the list into contiguous form by
+				// moving nodes backward to fill any gaps
+				node0[path_size] = node0[i];
+				node0[i] = -1; // optional - make sure unused node slots are cleared
+				path_size = path_size + 1;
+			}
+		}
+
+==================== UNFIXABLE? ====================
+
+general - purple saber mesh appears as gray in non-3d-accel mode
+	--> I think this is because of colormap translucency mappings.  Namely, I think the colormap defines that when color X is viewed through color Y, it should be shown as color Z - X, Y, and Z must all be colors in the colormap, but 3d accel mode can "invent" the colors on the fly rather than being limited to the colors in the colormap.  The issue is that there are no purple-like colors in the colormap, so for the "color X shown through Y/purple" case, the only reasonable choice for Z is a gray-like color

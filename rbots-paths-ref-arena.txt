@@ -1,0 +1,44 @@
+north = red
+south = gold
+
+path 0/28 = 3f gold flag, down base hole to 2f, down center hole to 1f, around corner and up ramp to 2f red loop doorway
+	unidirectional
+	red rank = 2
+	intersections: 224 255 256 257 261
+path 1/29 = 3f red flag, down base hole to 2f, down center hole to 1f, around corner and up ramp to 2f gold loop doorway
+	unidirectional
+	gold rank = 2
+	intersections: 223 262 256 257 266
+path 2/30 = 4f loop above map center between bases
+	intersections: 268 272
+path 3/31 = 4f loop above red base
+	intersections: 272
+path 4/32 = 4f loop above gold base
+	intersections: 268
+path 5/33 = 2f gold loop
+	gold rank = 2
+	intersections: 292 289
+path 6/34 = 2f red loop
+	red rank = 2
+	intersections: 298 295
+path 7/35 = 2f red loop doorway, up ramp to 3f red flag
+	red rank = 3
+	intersections: 295 261 223
+path 8/36 = 2f gold loop doorway, up ramp to 3f gold flag
+	gold rank = 3
+	intersections: 289 266 224
+path 9/37 = 2f spur from 2f gold loop, around 2f center hole, to 2f red loop
+	red rank = 1
+	gold rank = 1 (reversed)
+	intersections: 292 255 262 298
+
+
+node fixup
+110 --> 304
+111 --> 305
+117 --> 306
+118 --> 307
+120 --> 308
+121 --> 309
+223 --> 310
+224 --> 311

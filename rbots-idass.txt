@@ -11,6 +11,24 @@ TODO	propagate changes to other levels/episodes, then squash merge back to maste
 
 ==================== TICKETS ====================
 
+caesars
+	bot gets trapped in elevator sharft below jedigreedo room, doesn't try to jump out of shaft, keeps trying to jump/go up to top of shaft
+	bots try to attack each other through glass
+	bots track enemies while running on rooftop bridge catwalk
+caesars - pathing around corner past kitchen ramp to elevator on casino floor is rough
+caesars - going up waterfall, jumping out of water to go up elevator - not reliable
+caesars - waterfall nodes in water - bots strafe swim around them but fail to reach them - not reliable
+caesars - bot going down waterfall was lookup up at the rooftop bridge thing - was he looking at an enemy or the repeater/power cells?  he wasn't shooting at the time
+caesars - more casino area paths
+caesars - add elevator shaft "middle" nodes or extend bot lost timeout somehow
+caesars - paths through slashable grate vents?
+caesars - disable 'touched' message for hotel elevator - walking into the elevator walls triggers elevator movement
+		--> well, maybe? we probably would want a touched message to move the elevator if the bot gets caught underneath the elevator.  Since the elevator move duration is so long, maybe it doesn't matter here since the bot will normally jump out of the shaft in time, and in the rare exception case, the bot will kill itself if it gets trapped under the elevator
+
+general - elevator + door event mask - allow user to filter entered, touched, etc. events for players and bots
+
+general - srv2 sends trigger 12200 when the bot gets < 0.3 JKU close to ANY item - it really only needs to do this for the CTF key templates
+
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
 general - some nodes are too high in existing levels
 general - do bot sabers emit any extra light? if they don't, they should
@@ -19,6 +37,7 @@ general - technical debt - phase out SendMessageEx based API and use triggers in
 general - is force speed negated by rbot-special 0x2/slow flag?  i.e. when that special effect ends, does the bot return to normal speed instead of force speed?
 
 ctf - technical debt: CTF/botname cogstring collision - CTF uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF levels use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
+	--> caesars needed to do this, too
 
 mots - feature: in team play, use personality skins, not just kyle team skins
 mots - additional force powers (not yet supported by rbots) are still handled in the player cog skill message

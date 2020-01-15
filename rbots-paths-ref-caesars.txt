@@ -1,0 +1,11 @@
+path 0 - from top elevator, down waterfall, through casino, to hotel check-in
+path 1 - between private game suites
+path 2 - rooftops, part 1
+path 3 - rooftops, part 2
+path 4 - rooftops to manager's office/elevator to ground level, to waterfall elevator
+path 5 - loop from jedigreedo area, down elevator to waterfall, through secret path to elevator, up to secret area behind jedigreedo
+path 6 - rooftop to elevator down to gaming director room
+path 7 - gaming director room loop
+path 8 - rooftop to elevator down to security manager room
+path 9 - casino floor up elevator to hotel room hallway
+path 10 - hotel room through hallway into swimming pool

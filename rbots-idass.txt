@@ -1,20 +1,9 @@
-TODO	this may eliminate the need for the new nav flags:
-	when bot lost and nav can't find node, start a timer to query nav every second for nearest node
-	stop timer on bot death or nav returning a node
-	separate timer to randomly regenerate a lost wander vector every 3 seconds
-	tbd - lostcount changes
-	--> see lost-bot-cleanup shelve for WIP
-TODO	stretch - mitigate infinite wait for lower elevator near gold sas entrance
-TODO	stretch - nav cog - flag to ignore vertical distance checks when finding node for lost bot
-TODO	stretch - nav cog - flag to ignore LOS, vertical distance checks, etc. if bot and node are in the same sector when finding node for lost bot
-TODO	propagate changes to other levels/episodes, then squash merge back to master
-
 ==================== TICKETS ====================
 
+caesars - bots fall down jedigreedo glass elev shaft - seem to "force jump" sbx-style in midair on the way down, so no fall damage taken
 caesars
 	bot gets trapped in elevator sharft below jedigreedo room, doesn't try to jump out of shaft, keeps trying to jump/go up to top of shaft
 	bots try to attack each other through glass
-	bots track enemies while running on rooftop bridge catwalk
 caesars - pathing around corner past kitchen ramp to elevator on casino floor is rough
 caesars - going up waterfall, jumping out of water to go up elevator - not reliable
 caesars - waterfall nodes in water - bots strafe swim around them but fail to reach them - not reliable
@@ -27,14 +16,20 @@ caesars - disable 'touched' message for hotel elevator - walking into the elevat
 
 general - elevator + door event mask - allow user to filter entered, touched, etc. events for players and bots
 
+general - technical debt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv? nav/nav-special, nav/path, path/pathinfo?)
+general - technical debt - phase out SendMessageEx based API and use triggers instead
+			--> NO!  Performance testing demonstrates that messages are more efficient (as expected) as too many triggers does hurt performance (e.g. item special info triggers)
+			--> Demonstration: compare performance in challenge level with the "if (GetThingType(item) == 5)" check enabled/disabled in findpowerups message - night and day difference, even though there is still noticeable lag even with the check enabled
 general - srv2 sends trigger 12200 when the bot gets < 0.3 JKU close to ANY item - it really only needs to do this for the CTF key templates
 
+general - removing bots only works about 95% of the time - every once in a while, it fails, and a rogue bot thing is still running around the level
+
+general - refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead)
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
 general - some nodes are too high in existing levels
-general - do bot sabers emit any extra light? if they don't, they should
-general - botcam improvements - eliminate need to switch back to player and then back to bot when bot dies
-general - technical debt - phase out SendMessageEx based API and use triggers instead
 general - is force speed negated by rbot-special 0x2/slow flag?  i.e. when that special effect ends, does the bot return to normal speed instead of force speed?
+
+general - path changing - pick fairly even when multiple intersections from a single path
 
 ctf - technical debt: CTF/botname cogstring collision - CTF uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF levels use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
 	--> caesars needed to do this, too
@@ -44,9 +39,9 @@ mots - additional force powers (not yet supported by rbots) are still handled in
 
 duel - bots try to walk through force fields
 
-arena - not all parts of level are pathed yet
+arena - is it possible to teach the bots how to get to the raildet and concrifle secret areas?  how about the revive in the lower area
 
-challenge - for some reason, the SAS doors don't always work for bots (gold side colored SAS has issues - need to confirm other cases)
+challenge - for some reason, the SAS doors don't always work for bots (gold side colored SAS has issues - red side colored SAS also has issues - need to confirm other cases)
 
 bes - bots get stuck under elevators in lower area, usually suicide themselves because they often don't recover
 
@@ -54,6 +49,7 @@ nar - rbot-elev-nar.cog doesn't seem to be used (or complete, for that matter) -
 nar - bots try to walk through the force field
 nar - change elevator cog to rbot-elev so the elevator returns to bottom frame after use (this better matches the original level behavior)
 	--> alternatively, change to wait for elev and only go up when it is at frame 0 - further, elevator should be activated by switch only (i.e. activate trigger), not simply walking on the elevator
+		--> elev event mask needed?
 	--> in other words, smooth out this elevator usage - it's terribly rough right now
 nar - bots try to run the wrong way on the conveyor belts - srv doesn't detect bot obstructed, since the "velocity" (relative to the moving floor) is "good"
 
@@ -75,13 +71,46 @@ spaceport - bots can get temporarily stuck on door leading into stacked crate ar
 
 temple - bots sometimes get temporarily stuck behind doorway extruded frames
 
-==================== TICKETS - UNFIXABLE? ====================
-
-general - when bots use force persuasion, player cannot see them (except on overlay map) when using force seeing -- unfortunately, this is probably not easily fixable since the game engine magically reveals applicable invisible players/actors based on whether bin 23 is active or not and this only works if the thing exists at level load time and has the 0x200 actor flag (i.e. similar barrier to actors having dynamic weapon meshes).  Technically, this may be fixable in MotS, but I haven't tested that.
-			--> workaround - there is a hack in the srv force cog to show/hide the bot based on whether bin 23 (force seeing) for the local player is active
-			--> Note: changing bot model apparently resets the geo mode to 4, so the bot is momentarily visible until the next pulse hides it again with geo 0
-
 ==================== IDEAS ====================
+
+** Rbots Jed Plugin **
+
+	would this be at all useful?
+	could even just do JS+OLE - don't necessarily need a compiled EXE/DLL
+
+	plugin ideas:
+	DONE
+		Upgrade to current Rbots (convert rbot-nav.cog into rbot-nav.cog + rbot-path.cogs + rbot-pathinfo-ctf.cogs, add rbot-srv-force.cog from rbot-srv.cog, etc.)
+		Rbot Consistency Checker
+			validate bot ids, path ids, check for missing/duplicate cogs, etc.
+				this could have knowledge of CTF/MotS, too -- if CTF_MAIN.COG present or Jed in MotS mode, tweak handling accordingly
+		(alpha prototype) Path preview using 3d preview
+	TODO
+		Create path from selection
+			select node things, add a new path
+		Cog management GUI? (add/remove/reorder bots, etc.)
+		Set node height from ground (does OLE API give enough to impl this? put on your geometry hat...)
+		Bot model wizard (for JK):
+			Select base model (e.g. kya18.3do), generate weapon mesh models (yun-0.3do, yun-1.3do, etc.)
+			Basically incorporate the standalone Rbots Character Wizard into the plugin, but allow selection of models, etc. via JED (use game paths, etc. to find stuff in GOBs)
+		Bot template wizard:
+			prompt for 3do, soundclass, etc. and update master.tpl/mots.tpl
+		Add bot wizard:
+			prompt for skin, name, flags, team, etc.
+		Layer path nodes:
+			put all path node things in navigation layer
+			(or maybe more generally, a plugin to select nodes - all or by path
+		bot arrival node wizard
+			automate setting up a node for bot arrival cog
+		node/surf/sector special info management (display, set info)
+
+** MAYBE -- Level-based bot admin menu **
+
+	make bot admin a level-accessible feature so it will work with more mods
+	use rbot patch only for "remote control" to bot admin, not as full impl
+
+	this may rely on unsync'd createthingatpos to create a HUD menu that follows the player's POV
+		of course, if it's a level based menu, how does the player "click"?  that would normally be a weapon fire message or a bin activate message, right?
 
 ** Character flags **
 	The character flags params have been removed since the feature was never implemented.
@@ -91,6 +120,19 @@ general - when bots use force persuasion, player cannot see them (except on over
 	alternatively, set min/max path ranks that the bot can use
 	really, the bot can use any path, but if it comes across a "preferred" path, it will try to use that instead
 	the idea is to have defensive bots stay close to their own base and offensive close to the opposing base (unless they steal the flag)
+
+** More Nav Flags and lost bots handling **
+
+	TODO	this may eliminate the need for the new nav flags:
+		when bot lost and nav can't find node, start a timer to query nav every second for nearest node
+		stop timer on bot death or nav returning a node
+		separate timer to randomly regenerate a lost wander vector every 3 seconds
+		tbd - lostcount changes
+		--> see lost-bot-cleanup shelve for WIP
+	TODO	stretch - mitigate infinite wait for lower elevator near gold sas entrance
+	TODO	stretch - nav cog - flag to ignore vertical distance checks when finding node for lost bot
+	TODO	stretch - nav cog - flag to ignore LOS, vertical distance checks, etc. if bot and node are in the same sector when finding node for lost bot
+	TODO	propagate changes to other levels/episodes, then squash merge back to master
 
 ** OBE: To ID or not to ID? **
 	It's nice to have stuff work without needing to manage IDs (e.g. path cogs), but it makes some things harder because you would need to deduce the synthesized ID somehow or be given a cog reference number.
@@ -139,3 +181,7 @@ general - when bots use force persuasion, player cannot see them (except on over
 
 general - purple saber mesh appears as gray in non-3d-accel mode
 	--> I think this is because of colormap translucency mappings.  Namely, I think the colormap defines that when color X is viewed through color Y, it should be shown as color Z - X, Y, and Z must all be colors in the colormap, but 3d accel mode can "invent" the colors on the fly rather than being limited to the colors in the colormap.  The issue is that there are no purple-like colors in the colormap, so for the "color X shown through Y/purple" case, the only reasonable choice for Z is a gray-like color
+
+general - when bots use force persuasion, player cannot see them (except on overlay map) when using force seeing -- unfortunately, this is probably not easily fixable since the game engine magically reveals applicable invisible players/actors based on whether bin 23 is active or not and this only works if the thing exists at level load time and has the 0x200 actor flag (i.e. similar barrier to actors having dynamic weapon meshes).  Technically, this may be fixable in MotS, but I haven't tested that.
+			--> workaround - there is a hack in the srv force cog to show/hide the bot based on whether bin 23 (force seeing) for the local player is active
+			--> Note: changing bot model apparently resets the geo mode to 4, so the bot is momentarily visible until the next pulse hides it again with geo 0

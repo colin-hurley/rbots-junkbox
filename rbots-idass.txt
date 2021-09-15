@@ -16,11 +16,14 @@ caesars - disable 'touched' message for hotel elevator - walking into the elevat
 
 general - elevator + door event mask - allow user to filter entered, touched, etc. events for players and bots
 
+general - technical debt - clean up templates, hacked cogs, etc. to minimize differences with original assets (e.g. is there a reason rbots have their own saber explosion templates? Do we truly need to change the cogs for _walkplayer and +backpack templates?)
 general - technical debt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv? nav/nav-special, nav/path, path/pathinfo?)
 general - technical debt - phase out SendMessageEx based API and use triggers instead
 			--> NO!  Performance testing demonstrates that messages are more efficient (as expected) as too many triggers does hurt performance (e.g. item special info triggers)
 			--> Demonstration: compare performance in challenge level with the "if (GetThingType(item) == 5)" check enabled/disabled in findpowerups message - night and day difference, even though there is still noticeable lag even with the check enabled
 general - srv2 sends trigger 12200 when the bot gets < 0.3 JKU close to ANY item - it really only needs to do this for the CTF key templates
+
+general - higher bot difficulty idea - if bot and target are about level with each other (Z diff < some small JKU value), shoot explosive projectiles (primary fire for raildet and concrifle) at ground by target instead of trying to hit target directly?  If the bot has trouble hitting the target with a direct shot, shooting the ground like a player often would might be better
 
 general - removing bots only works about 95% of the time - every once in a while, it fails, and a rogue bot thing is still running around the level
 
@@ -37,7 +40,7 @@ ctf - technical debt: CTF/botname cogstring collision - CTF uses cogstrings in t
 mots - feature: in team play, use personality skins, not just kyle team skins
 mots - additional force powers (not yet supported by rbots) are still handled in the player cog skill message
 
-duel - bots try to walk through force fields
+duel - bots try to walk through force fields - maybe we can adjust paths and disable segments going through doorways when force fields are active?
 
 arena - is it possible to teach the bots how to get to the raildet and concrifle secret areas?  how about the revive in the lower area
 

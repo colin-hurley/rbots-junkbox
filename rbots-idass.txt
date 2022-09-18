@@ -45,6 +45,7 @@ duel - bots try to walk through force fields - maybe we can adjust paths and dis
 arena - is it possible to teach the bots how to get to the raildet and concrifle secret areas?  how about the revive in the lower area
 
 challenge - for some reason, the SAS doors don't always work for bots (gold side colored SAS has issues - red side colored SAS also has issues - need to confirm other cases)
+challenge - bots will get stuck in the elevator shaft leading up to the gold base, probably from multiple bots awaiting arrival of the elevator and both attempting to enter the shaft when it arrives (first bot gets on elevator, second bot falls into shaft). The bot is unable to get out of the shaft in most cases, blocking the elevator from arriving for other bots.
 
 bes - bots get stuck under elevators in lower area, usually suicide themselves because they often don't recover
 

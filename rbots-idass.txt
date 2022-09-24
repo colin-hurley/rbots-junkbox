@@ -1,9 +1,12 @@
+Note: This file is essentially a quick and dirty ticket backlog.
+Most of these items could be entered as actual tickets.
+Some of these items are simply ramblings and thoughts that I wish to hold onto for further consideration before implementing any changes.
+
 ==================== TICKETS ====================
 
-caesars - bots fall down jedigreedo glass elev shaft - seem to "force jump" sbx-style in midair on the way down, so no fall damage taken
-caesars
-	bot gets trapped in elevator sharft below jedigreedo room, doesn't try to jump out of shaft, keeps trying to jump/go up to top of shaft
-	bots try to attack each other through glass
+caesars - bots fall down jedigreedo glass elev shaft - seem to "force jump" sbx-style in midair on the way down, so no fall damage taken (I suspect the bot is trying to "jump" over an obstruction)
+caesars - bot gets trapped in elevator sharft below jedigreedo room, doesn't try to jump out of shaft, keeps trying to jump/go up to top of shaft
+caesars - bots try to attack each other through glass
 caesars - pathing around corner past kitchen ramp to elevator on casino floor is rough
 caesars - going up waterfall, jumping out of water to go up elevator - not reliable
 caesars - waterfall nodes in water - bots strafe swim around them but fail to reach them - not reliable

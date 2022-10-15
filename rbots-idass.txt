@@ -20,14 +20,19 @@ caesars - disable 'touched' message for hotel elevator - walking into the elevat
 general - test.bat scripts don't work reliably on Windows 10 (the %~s1 param doesn't produce a short file path if 8.3 names are not enabled, causing the game launch to fail)
 general - test.bat scripts launch GOG versions of JK/MotS in fullscreen mode (GOG versions invert the meaning of the -windowgui option)
 
+general - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.)
+
 general - elevator + door event mask - allow user to filter entered, touched, etc. events for players and bots
 general - clean up variants of rbot elevator cogs, match variants of JK elevator cogs instead of a generic cog with tons of symbols?
 
 general - fists, check rate of fire, might be too fast
 
-general - when force pulling a bot weapon, sometimes the bot will pick up the pulled weapon thing. Add a short "no pickup" delay (I think the player cog uses 0.2/0.25 seconds?) so the weapon can't be immediately recovered by the bot
+general - when force pulling a bot weapon, sometimes the bot will pick up the pulled weapon thing. Add a short "no pickup" delay (I think the player cog uses 0.2/0.25 seconds?) so the weapon can't be immediately recovered by the bot (might need to check powerup collide type to see if bot can pick up the item?)
 
 general - technical debt - clean up templates, hacked cogs, etc. to minimize differences with original assets (e.g. is there a reason rbots have their own saber explosion templates? Do we truly need to change the cogs for _walkplayer and +backpack templates?)
+general - technical debt - retire hacked force power cogs - I believe it is possible to reimplement the bot force power handling so custom force_*.cog files are not needed. The bots can return an appropriate value from the skill message to let the original force power cog handle the actor effects (just as the actor_*.cog files do). The bot force cog will need to implement the required effects on the player (just as the darkjedi_*.cog files do) as well as on other bots (like kyle.cog? or like darkjedi_*.cog? either way would probably work. Probably darkjedi_*.cog style would be cleaner as most of the handling code would then be the same for both bots and players, rather than having a skill-like handler for bots and a force_*.cog like handling for players)
+general - technical debt - retire hacked player cog - Assuming another solution can be found to replace the bot score hack in kyle.cog, I believe it is possible to use the vanilla kyle.cog and pow_backpack.cog files, and to use rbot-backpack.cog for only the backpacks dropped by bots
+general - backpack note - while debugging backpack messages, etc., I observed a situation where I died in between two bots, then one backpack was created, but two triggers were received by the backpack cog to pick up the backpack. Might be both srv2 cogs trying to pick up the backpack in the same instant. Since the one cog will use TakeItem() to remove the backpack, I don't see how the second cog could still see the backpack thing after TakeItem() gets called. Any refactoring to the backpack cog should be mindful of this double trigger possibility and guard against unwanted side effects of the double trigger happening (i.e. clear backpack thing from data list so when the second trigger arrives, no data is found for the second bot to pick up).
 general - technical debt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv? nav/nav-special, nav/path, path/pathinfo?)
 general - technical debt - phase out SendMessageEx based API and use triggers instead
 			--> NO!  Performance testing demonstrates that messages are more efficient (as expected) as too many triggers does hurt performance (e.g. item special info triggers)

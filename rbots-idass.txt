@@ -52,6 +52,9 @@ general - is force speed negated by rbot-special 0x2/slow flag?  i.e. when that 
 
 general - path changing - pick fairly even when multiple intersections from a single path
 
+general - bot backpack pickup does not honor player automaount settings
+general - bot shields do not function exactly like player shields - at 50 shields, damage starts to be split between shields and health for players, but for bots, the shields must be depleted completely before the bot will start taking health damage. See TODO in rbot-srv.cog
+
 ctf - technical debt: CTF/botname cogstring collision - CTF uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF levels use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
 	--> caesars needed to do this, too
 
@@ -88,9 +91,8 @@ freezer - there was a weird case under the platform by the elevator/windows wher
 freezer - bots sometimes/often can't properly ride the rising air by the elevators up toward the central area
 freezer - pathing issues in center area - overlapping redundant paths cause bots to turn around sometimes (i.e. nodes 0 and 1 of multiple paths overlap, not just node 0, so bots will randomly change back to previous path one node later)
 
-throne - bots jump over/into pits
-throne - central elevator shaft is a pit and kills bots even when they are on the elevator
-throne - bots enter the elevator shaft when there is no elevator, so they fall into the pit
+throne - bots sometimes jump over/into pits (usually in combat mode trying to reach enemy bots)
+throne - need to re-convert level from original MotS version. Apparently there have been some alterations to the level, including lighting calculations, a revive pack on the stairs, and raising the upper catwalks. Need to re-convert the level to stay true to the original.
 
 gantry - outer catwalk hopping, bots can't run on all of the catwalk
 

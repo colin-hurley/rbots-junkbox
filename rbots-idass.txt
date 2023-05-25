@@ -25,7 +25,6 @@ general - test.bat scripts launch GOG versions of JK/MotS in fullscreen mode (GO
 general - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.)
 general - refine bot special info to accept parameters to customize behavior (e.g. jump height scale for precision jumping)
 general - path cog: refactor unidirectional, nonlooping into path flags (like original release) but allow setting/clearing flags in the same way as enabling/disabling a path (suggested flags: 0x1/unidirectional, 0x2/looping, 0x4/disabled, 0x8/run backwards if unidirectional)
-general - special info: jump special info does not check to see if bot is on the ground before applying jump force; thus, the bot can hop in mid-air SBX-force-jump-style. This has been observed in valley when the bot is jumping onto the elevator - if the elevator is already at the lower frame, the bot will jump once to get onto the platform and then again in midair to get onto the elevator
 
 general - elevator + door event mask - allow user to filter entered, touched, etc. events for players and bots
 
@@ -50,8 +49,7 @@ general - higher bot difficulty idea - if bot and target are about level with ea
 
 general - technical debt: refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead)
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
-general - some nodes are too high in existing levels (including bes, TBD)
-general - technical debt: remove unnecessary submerged thingflag from nodes in any levels that still use it (blades? oasis? challenge? spaceport?)
+general - some nodes are too high in existing levels (including bes, spaceport=DONE, TBD)
 general - is force speed negated by rbot-special 0x2/slow flag?  i.e. when that special effect ends, does the bot return to normal speed instead of force speed?
 general - check bot speed when walking backward. Is it the correct speed (i.e. slowed) or does bot move at same speed as when running forward?
 
@@ -108,9 +106,7 @@ freezer - bots cannot pick up the rbacta (because of srv2 template mismatch) in 
 
 throne - bots sometimes jump over/into pits (usually in combat mode trying to reach enemy bots)
 
-gantry - outer catwalk hopping, bots can't run on all of the catwalk
-
-spaceport - bots can get temporarily stuck on door leading into stacked crate area
+gantry - outer catwalk hopping, bots can't run on all of the catwalk - idea: maybe an invisible 3do that sits on top of the catwalk in one sector? i.e. have the bot walk on that 3do in the problem sector instead of directly on the catwalk 3do
 
 temple - bots sometimes get temporarily stuck behind doorway extruded frames
 

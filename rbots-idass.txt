@@ -58,7 +58,6 @@ general - lost bot - if a lost bot is nearest the node that starts and ends a lo
 
 general - bot backpack pickup does not honor player automaount settings
 general - bot shields do not function exactly like player shields - at 50 shields, damage starts to be split between shields and health for players, but for bots, the shields must be depleted completely before the bot will start taking health damage. See TODO in rbot-srv.cog
-general - bot with supershield doesn't take damage in certain situations where it should (e.g. falling into a pit, Rbot Admin kill bot function, Rbot Admin remove bot function)
 general - make bot pit death behave more like player - player will fade to black and respawn without dropping a backpack, but buts will kill themselves and needlessly drop a backpack. It would be nice to emulate the player pit death behavior as much as possible
 
 general - technical debt: sort cogs to minimize jkl changes (put srv cogs first and then paths, special, etc. cogs that change count more toward the bottom)
@@ -95,8 +94,6 @@ oasis - technical debt: some 0x2/slow movement special info may be obsolete if i
 
 valley - pathing through lower level could be improved for reliability, sometimes bots don't quite navigate the path exactly as intended and the bot will end up behind a crate or close to/under the elevator as a result
 valley - sometimes bot jumping onto elevator in lower area isn't quite right due to change in bot jump height in previous commit
-
-bgj - paths by the starting area could use some touch-up
 
 freezer - item seeking causes bots to jump over/into pits in center area
 freezer - light-up tubes don't light up for bots

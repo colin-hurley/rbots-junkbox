@@ -127,9 +127,11 @@ def transform_jed(input, output, jkl):
 					surface = jkl.find_surface(sector_num, scsf_num)
 					if surface is not None:
 						extralight = surface.extralight
+					extralight_formatted = '%g' % extralight
 					if extralight > 0:
-						print 'DEBUG :: ScNum: %3d  ScSfIdx: %2d  SfNum: %4d  Extralight: %f' % (sector_num, scsf_num, surface.num, extralight)
-					tokens[6] = str(extralight)
+						extralight_formatted = extralight_formatted.lstrip('0')
+						print 'DEBUG :: ScNum: %3d  ScSfIdx: %2d  SfNum: %4d  Extralight: %s' % (sector_num, scsf_num, surface.num, extralight_formatted)
+					tokens[6] = extralight_formatted
 					output.write(' '.join(tokens) + '\n')
 					line = input.readline() # line 2: xyz and rgb for surface vertices
 					output.write(line)

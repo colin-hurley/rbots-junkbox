@@ -17,17 +17,16 @@ caesars - paths through slashable grate vents?
 caesars - disable 'touched' message for hotel elevator - walking into the elevator walls triggers elevator movement
 		--> well, maybe? we probably would want a touched message to move the elevator if the bot gets caught underneath the elevator.  Since the elevator move duration is so long, maybe it doesn't matter here since the bot will normally jump out of the shaft in time, and in the rare exception case, the bot will kill itself if it gets trapped under the elevator
 
-general - #utilities - extralight-fixer.py INFILE.jkl FILE.jed - read JKL, build extralight data map, read JED, alter surface extralight settings, save temp file then overwrite original on success or just write to stdout
-
 general - #techdebt - consider using maven wrapper (mvnw) to make it easier for folks to build the project (still need to manually build dependencies, but it would be good to eliminate the need for manual Maven install)
 general - #techdebt - reorganize source directories to eliminate directory names that exceed 8 chars to help mitigate the need for directory rename workarounds on modern OS versions with 8.3 names disabled (e.g. put everything under ctf/ jk/ and mots/ top-level directories -- ctf/devel/, jk/deve/, mots/devel)
 
 general - #techdebt - test.bat scripts don't work reliably on Windows 10 (the %~s1 param doesn't produce a short file path if 8.3 names are not enabled, causing the game launch to fail)
 general - #techdebt - test.bat scripts launch GOG versions of JK/MotS in fullscreen mode (GOG versions invert the meaning of the -windowgui option)
 
-general - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.)
-general - refine bot special info to accept parameters to customize behavior (e.g. jump height scale for precision jumping)
-general - path cog: refactor unidirectional, nonlooping into path flags (like original release) but allow setting/clearing flags in the same way as enabling/disabling a path (suggested flags: 0x1/unidirectional, 0x2/looping, 0x4/disabled, 0x8/run backwards if unidirectional)
+general - #special #revisit - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.). Update: This may be needlessly generic. rbot-elev-call.cog was much easier to implement with just specifying the nodes it needs and letting it worry about the map state logic, rather than trying to make a generic conditional activate trigger. It may be worthwhile to abandon the activate trigger and just model the other cogs after rbot-elev-call.cog and rbot-door-switch.cog going forward.
+general - #special #revisit - refine bot special info to accept parameters to customize behavior (e.g. jump height scale for precision jumping). Update: It may be worthwhile to move these sort of special behaviors to dedicated action cogs (e.g. make a new cog named rbot-jump.cog or something), or fold into the cog that knows the conditions (e.g. rbot-elev-call.cog) rather than trying to roll a generic special cog for all special actions.
+
+general - #techdebt - change rbot-door.cog to be a drop-in replacement for 00_door.cog that supports bots (combo of rbot-door.cog and rbot-2door.cog)
 
 general - elevator + door event mask - allow user to filter entered, touched, etc. events for players and bots
 
@@ -42,6 +41,7 @@ general - #techdebt - refactor cog ref arrays to linked list iteration (startup/
 general - #techdebt - phase out SendMessageEx based API and use triggers instead
 			--> NO!  Performance testing demonstrates that messages are more efficient (as expected) as too many triggers does hurt performance (e.g. item special info triggers)
 			--> Demonstration: compare performance in challenge map with the "if (GetThingType(item) == 5)" check enabled/disabled in findpowerups message - night and day difference, even though there is still noticeable lag even with the check enabled
+			--> Cogs that still use triggers that could be adjusted to use SendMessageEx: nav, nav-special, path, pathinfo, item-special, backpack, player/srv-force (skill trigger)
 
 general - bots may be a bit too consistently accurate on lower difficulties, adjust accuracy curve so the difference is more noticeable
 general - default bot difficulty based on player selected difficulty (GetDifficulty()), remove difficulty param from startup cog
@@ -52,8 +52,12 @@ general - creating a thing at bot's next location / item / target enables monito
 general - some nodes are too high in existing maps (including bes, spaceport=DONE, TBD)
 general - check bot speed when walking backward. Is it the correct speed (i.e. slowed) or does bot move at same speed as when running forward?
 
-general - path changing - pick fairly even when multiple intersections are from a single path (e.g. path starts and ends with same node, or node occurs multiple times in the path)
-general - lost bot - if a lost bot is nearest the node that starts and ends a looping path, the bot will always run forward on the path. I believe this is because the nav cog skips over the currently-saved candidate node instead of randomly choosing from among the "duplicate" choices. I think the logic could be altered so when the current candidate node is encountered again in another path/node index, then it can do a random check to swap the new instance with the saved instance. This can be a fair check like the intersection path change check (1 in N+1 chance to select a path at an N-way intersection)
+general - #navigation - path changing - pick fairly even when multiple intersections are from a single path (e.g. path starts and ends with same node, or node occurs multiple times in the path)
+general - #navigation - lost bot - if a lost bot is nearest the node that starts and ends a looping path, the bot will always run forward on the path. I believe this is because the nav cog skips over the currently-saved candidate node instead of randomly choosing from among the "duplicate" choices. I think the logic could be altered so when the current candidate node is encountered again in another path/node index, then it can do a random check to swap the new instance with the saved instance. This can be a fair check like the intersection path change check (1 in N+1 chance to select a path at an N-way intersection)
+general - #navigation #improvement - navigate paths more intelligently to find desired powerups (instead of wandering randomly)
+general - #navigation #feature - allow paths to be weighted. The weight factor adjusts how likely a bot is to pick a particular path. If weight <= 0, ignore path; otherwise, chance = weight / (weight + otherweight) ? (check the math, make sure it maintains fair path selection)
+general - #navigation - after searching for items, if bot has lost LOS with node, then do 'bot lost' to get back on track? (bot frequently gets lost in 'duel' by searching for item after item, only to end up around the corner from the node they were heading for)
+general - #navigation - path cog: refactor unidirectional, nonlooping into path flags (like original release) but allow setting/clearing flags in the same way as enabling/disabling a path (suggested flags: 0x1/non-looping, 0x2/cannot run forward on path, 0x4/cannot run backward on path. Disabled = 0x6 = 0x2 + 0x4, or is there a reason we would need a dedicated flag?)
 
 general - bot shields do not function exactly like player shields - at 50 shields, damage starts to be split between shields and health for players, but for bots, the shields must be depleted completely before the bot will start taking health damage. See TODO in rbot-srv.cog
 general - make bot pit death behave more like player - player will fade to black and respawn without dropping a backpack, but buts will kill themselves and needlessly drop a backpack. It would be nice to emulate the player pit death behavior as much as possible. Perhaps as an initial step, the killed message could skip creating the backpack if the bot died in a pit.
@@ -63,8 +67,7 @@ general - #weapons #techdebt - saber_block procedure should check for 0x400 weap
 general - #weapons - (possibly unfixable) when bot dies, it gets a new thing number - mines, etc. created before the bot respawn will not score the bot points.
 
 general - #powerups - add ability to pickup rbacta (e.g. in freezer), st backpack (e.g. in spaceport), etc. powerups
-
-general - #navigation - after searching for items, if bot has lost LOS with node, then do 'bot lost' to get back on track? (bot frequently gets lost in 'duel' by searching for item after item, only to end up around the corner from the node they were heading for)
+general - #powerups - teach bots how to use bacta tanks to heal
 
 general - #techdebt - following srv-weapons refactoring, srv move procedure may now allow bots to move when they shouldn't be able to (e.g. gripped, awaiting event)
 general - #techdebt - there is at least one edge case where the bot may get stuck awaiting an event indefinitely. For example, in challenge, teleport the bot into the elevator shaft leading up to the gold base. If the bot has an arrival_event set, he will wait at the node for the elevator to reach frame 1. Normally, this would time out and the bot would continue on his way, but if he starts seeking a powerup while holding position waiting for the event, then the bot will remain indefinitely stuck because the bot lost timer is being reset by the item seeking. Unsure if the problem can be reproduced without the rbot-admin-teleport function.
@@ -73,6 +76,9 @@ general - #techdebt - srv-force recalculates rank and jedirank on demand; adjust
 general = #techdebt - consider changing cog discovery trigger ID to "rbots" magic number (82687)
 
 general - #powerups - additional powerups that could be supported: stbp, lightsaber, goggles, battery
+
+general - #feature #special - add special flag to make bot crouch. Can set/clear the 0x10000 physics flag to control bot crouching. Need to set appropriate AI move speed in checkspeed, else bot will move at run speed while crouching.
+general - #feature #special - add special(?) flag to make bot use lightsaber to slash open a grate
 
 ctf - technical debt: CTF/botname cogstring collision - CTF uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF maps use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
 	--> caesars needed to do this, too
@@ -86,7 +92,7 @@ mots - #weapons - I think the player can freeze and kill bots that have a supers
 
 duel - bots try to walk through force fields - maybe we can adjust paths and disable segments going through doorways when force fields are active?
 duel - polish the paths to maximize map coverage
-duel - #paths - bots reverse direction in the duel map when capturing flag. Is this due to ctf pathinfo calc reversing path direction to other base? i.e. bot runs up to flag, then reverses direction and goes back down the way he came from, rather than continuing to run forward.
+duel - #navigation - bots reverse direction in the duel map when capturing flag. Is this due to ctf pathinfo calc reversing path direction to other base? i.e. bot runs up to flag, then reverses direction and goes back down the way he came from, rather than continuing to run forward.
 
 arena - is it possible to teach the bots how to get to the raildet and concrifle secret areas?  how about the revive in the lower area
 
@@ -97,10 +103,10 @@ bes - #traps - bots don't use the force field trap
 
 nar - bots try to walk through the force field
 nar - bots try to run the wrong way on the conveyor belts - srv doesn't detect bot obstructed, since the "velocity" (relative to the moving floor) is "good"
-nar - #paths - redo paths - upper area by force field needs node size tweaks to mitigate bots falling; path leading from conveyor to elevator is unidirectional, so the bot will only go up the elevator on the right side and never down (this is leftover from the old rbot-nav cog that limited path count and size)
+nar - #navigation - redo paths - upper area by force field needs node size tweaks to mitigate bots falling; path leading from conveyor to elevator is unidirectional, so the bot will only go up the elevator on the right side and never down (this is leftover from the old rbot-nav cog that limited path count and size)
 
 oasis - #techdebt - custom lightning trap cog uses auto-aim (FireProjectile) while original cog does not (CreateThing). Probably done to make the lightning actually hit the bots. Or maybe just an oversight. Anyway, the auto-aim only has an effect if auto-aim is enabled in the player's setup menu options
-oasis - #paths #improvement #techdebt - some paths can be combined into longer paths (they are split because of old nav cog limitations), some unidirectional paths can probably be adjusted for bidirectional navigation
+oasis - #navigation #improvement #techdebt - some paths can be combined into longer paths (they are split because of old nav cog limitations), some unidirectional paths can probably be adjusted for bidirectional navigation
 
 valley - pathing through lower level could be improved for reliability, sometimes bots don't quite navigate the path exactly as intended and the bot will end up behind a crate or close to/under the elevator as a result
 valley - sometimes bot jumping onto elevator in lower area isn't quite right due to change in bot jump height in previous commit
@@ -118,7 +124,8 @@ reactor - #addbotsupport - add support for bots
 
 throne - bots sometimes jump over/into pits (usually in combat mode trying to reach enemy bots)
 
-vaporator - #addbotsupport - add support for bots
+vaporator - #bug - bots can't walk on small ramp going in/out of water by trap doors - same issue as outer platform in gantry?
+vaporator - #improvement #navigation - add path to let bot slash the grate on the top floor and crouch in to get the scope (requires implementation of grate slashing and crouching capabilities for bots)
 
 cargo - #addbotsupport - add support for bots
 
@@ -126,7 +133,7 @@ homestead - #addbotsupport - add support for bots
 
 gantry - outer catwalk hopping, bots can't run on all of the catwalk - idea: maybe an invisible 3do that sits on top of the catwalk in one sector? i.e. have the bot walk on that 3do in the problem sector instead of directly on the catwalk 3do
 
-spaceport - #paths - implement paths to currently unreachable areas (e.g. sniper window, top of moldy crow) and add alternate paths (e.g. drop down from concrifle room, cantina balcony) and hidden powerups (e.g. power boost)
+spaceport - #navigation - implement paths to currently unreachable areas (e.g. sniper window, top of moldy crow) and add alternate paths (e.g. drop down from concrifle room, cantina balcony) and hidden powerups (e.g. power boost)
 
 bespin - #addbotsupport - add support for bots
 

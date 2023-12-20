@@ -17,18 +17,15 @@ caesars - paths through slashable grate vents?
 caesars - disable 'touched' message for hotel elevator - walking into the elevator walls triggers elevator movement
 		--> well, maybe? we probably would want a touched message to move the elevator if the bot gets caught underneath the elevator.  Since the elevator move duration is so long, maybe it doesn't matter here since the bot will normally jump out of the shaft in time, and in the rare exception case, the bot will kill itself if it gets trapped under the elevator
 
+general - #techdebt - reorder level cogs to match the original LEC levels (cogs for doors, force fields, etc. that were in the original map by LEC). This will aid in comparing bot-enabled maps with their LEC counterparts.
+
 general - #techdebt - consider using maven wrapper (mvnw) to make it easier for folks to build the project (still need to manually build dependencies, but it would be good to eliminate the need for manual Maven install)
-general - #techdebt - reorganize source directories to eliminate directory names that exceed 8 chars to help mitigate the need for directory rename workarounds on modern OS versions with 8.3 names disabled (e.g. put everything under ctf/ jk/ and mots/ top-level directories -- ctf/devel/, jk/deve/, mots/devel)
 
 general - #techdebt - test.bat scripts don't work reliably on Windows 10 (the %~s1 param doesn't produce a short file path if 8.3 names are not enabled, causing the game launch to fail)
-general - #techdebt - test.bat scripts launch GOG versions of JK/MotS in fullscreen mode (GOG versions invert the meaning of the -windowgui option)
+general - #techdebt - test.bat scripts launch GOG versions of JK/MotS in fullscreen mode (GOG versions invert the meaning of the -windowgui option) ; UPDATE 11/23 - my GOG version launches in full screen regardless of whether -windowgui is used or not, and regardless of whether JK.EXE or JKStart.exe is invoked
 
 general - #special #revisit - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.). Update: This may be needlessly generic. rbot-elev-call.cog was much easier to implement with just specifying the nodes it needs and letting it worry about the map state logic, rather than trying to make a generic conditional activate trigger. It may be worthwhile to abandon the activate trigger and just model the other cogs after rbot-elev-call.cog and rbot-door-switch.cog going forward.
 general - #special #revisit - refine bot special info to accept parameters to customize behavior (e.g. jump height scale for precision jumping). Update: It may be worthwhile to move these sort of special behaviors to dedicated action cogs (e.g. make a new cog named rbot-jump.cog or something), or fold into the cog that knows the conditions (e.g. rbot-elev-call.cog) rather than trying to roll a generic special cog for all special actions.
-
-general - #techdebt - change rbot-door.cog to be a drop-in replacement for 00_door.cog that supports bots (combo of rbot-door.cog and rbot-2door.cog)
-
-general - elevator + door event mask - allow user to filter entered, touched, etc. events for players and bots
 
 general - improve blinded bot behavior - right now, bots simply move to a random location. Investigate more sophisticated behavior, such as navigating paths but simulate not being able to see well (e.g. move to node position +/- random vector offset based on difficulty?)
 
@@ -36,28 +33,34 @@ general - #techdebt - retire hacked force power cogs (grip pull deadlysight blin
 		--> UPDATE: This may be more trouble than it's worth. Force blinding just sets the 0x800/blind flag on actors without sending a skill message, and some of the MotS powers (including push and chainlight) do likewise and apply effects to actors without sending a skill message. A compromise may be to keep the hacked force powers for "best/most authentic experience" but stub some skill message content that will allow the vanilla force cogs to still interact with the bots for "acceptable experience" in case the nohotkeys patch cannot be used for some reason.
 
 general - #techdebt - retire hacked player and backpack cogs - Assuming another solution can be found to replace the bot score hack in kyle.cog, I believe it is possible to use the vanilla kyle.cog and pow_backpack.cog files, and to use rbot-backpack.cog for only the backpacks dropped by bots (bot srv cogs can handle force fx on player just like dark jedi cogs do, no skill trigger hacks needed)
-general - backpack note - while debugging backpack messages, etc., I observed a situation where I died in between two bots, then one backpack was created, but two triggers were received by the backpack cog to pick up the backpack. Might be both srv2 cogs trying to pick up the backpack in the same instant. Since the one cog will use TakeItem() to remove the backpack, I don't see how the second cog could still see the backpack thing after TakeItem() gets called. Any refactoring to the backpack cog should be mindful of this double trigger possibility and guard against unwanted side effects of the double trigger happening (i.e. clear backpack thing from data list so when the second trigger arrives, no data is found for the second bot to pick up).
+
 general - #techdebt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv? nav/nav-special, nav/path, path/pathinfo?)
 general - #techdebt - phase out SendMessageEx based API and use triggers instead
 			--> NO!  Performance testing demonstrates that messages are more efficient (as expected) as too many triggers does hurt performance (e.g. item special info triggers)
 			--> Demonstration: compare performance in challenge map with the "if (GetThingType(item) == 5)" check enabled/disabled in findpowerups message - night and day difference, even though there is still noticeable lag even with the check enabled
-			--> Cogs that still use triggers that could be adjusted to use SendMessageEx: nav, nav-special, path, pathinfo, item-special, backpack, player/srv-force (skill trigger)
+			--> Cogs that still use triggers that could be adjusted to use SendMessageEx: nav, nav-special, path, pathinfo, item-special, player/srv-force (skill trigger)
+			--> There is a noticeable stutter at startup when the bots all spawn. I believe this is due to triggers being sent between the nav/path/pathinfo cogs to locate the nearest node for each bot. The stutter is from all bots doing this (relatively) expensive call at the same time. Debug output for challenge map (8 bots initially) suggests about 650 nav/path/pathinfo triggers are sent for EACH of the 8 initial 'bot lost' triggers (so 8*650 = 5200 triggers total at startup to handle all initial 'bot lost')
 
 general - bots may be a bit too consistently accurate on lower difficulties, adjust accuracy curve so the difference is more noticeable
 general - default bot difficulty based on player selected difficulty (GetDifficulty()), remove difficulty param from startup cog
 general - higher bot difficulty idea - if bot and target are about level with each other (Z diff < some small JKU value), shoot explosive projectiles (primary fire for raildet and concrifle) at ground by target instead of trying to hit target directly?  If the bot has trouble hitting the target with a direct shot, shooting the ground like a player often would might be better
+
+general - #scoring - when score limit is set, match does not end until player reaches the score limit and then dies. Note: player score must not go below the limit as a result of dying. For example, if the player reaches the limit and then gets a suicide, the score is reduced to limit-1 and the match doesn't end. However, if the player reaches the limit and then gets killed by a bot, the game counts it as a suicide and reduces the score, but the startup cog corrects this and returns the player score to the limit, so the match will end. Note: CTF correctly ends when score limit is reached. CTF uses jkEndLevel(1) to end the level after displaying scores.
 
 general - #techdebt refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead)
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
 general - some nodes are too high in existing maps (including bes, spaceport=DONE, TBD)
 general - check bot speed when walking backward. Is it the correct speed (i.e. slowed) or does bot move at same speed as when running forward?
 
+general - #navigation - capture touched message for temporary node thing to detect when bot reaches the node. This will help prevent a bot missing small nodes because of passing through them between AI pulses.
+
 general - #navigation - path changing - pick fairly even when multiple intersections are from a single path (e.g. path starts and ends with same node, or node occurs multiple times in the path)
 general - #navigation - lost bot - if a lost bot is nearest the node that starts and ends a looping path, the bot will always run forward on the path. I believe this is because the nav cog skips over the currently-saved candidate node instead of randomly choosing from among the "duplicate" choices. I think the logic could be altered so when the current candidate node is encountered again in another path/node index, then it can do a random check to swap the new instance with the saved instance. This can be a fair check like the intersection path change check (1 in N+1 chance to select a path at an N-way intersection)
 general - #navigation #improvement - navigate paths more intelligently to find desired powerups (instead of wandering randomly)
 general - #navigation #feature - allow paths to be weighted. The weight factor adjusts how likely a bot is to pick a particular path. If weight <= 0, ignore path; otherwise, chance = weight / (weight + otherweight) ? (check the math, make sure it maintains fair path selection)
-general - #navigation - after searching for items, if bot has lost LOS with node, then do 'bot lost' to get back on track? (bot frequently gets lost in 'duel' by searching for item after item, only to end up around the corner from the node they were heading for)
 general - #navigation - path cog: refactor unidirectional, nonlooping into path flags (like original release) but allow setting/clearing flags in the same way as enabling/disabling a path (suggested flags: 0x1/non-looping, 0x2/cannot run forward on path, 0x4/cannot run backward on path. Disabled = 0x6 = 0x2 + 0x4, or is there a reason we would need a dedicated flag?)
+general - #navigation #arrival #improvement - review default 30 second arrival timeout; this might be too long for the usual case. Should it be 10.0 or 20.0 instead?
+general - #navigation #arrival #bug - arrival cog attempts to generate duplicate/redundant arrival events when same arriver is used in multiple slots. I think what is happening is, when the arriver is used in multiple slots, the game will send multiple arrived messages to the cog, one for each slot where the arriver is used, because of the arriver being a linked symbol passed in from the JKL. For example, elevators often use two slots, one for the bottom floor, and the other for the top floor, so the arrival cog would receive two arrived messages. Fortunately, what would be redundant arrival events are suppressed thanks to the waiting0-9 vars (i.e. the first event gets sent while waitingX is 1, but sending the event sets waitingX to 0, so the second event gets suppressed). The good news is, even if the events weren't suppressed, they are still technically correct for the situation (just redundant), so no unexpected side effects should occur other than redundant triggers being sent.
 
 general - bot shields do not function exactly like player shields - at 50 shields, damage starts to be split between shields and health for players, but for bots, the shields must be depleted completely before the bot will start taking health damage. See TODO in rbot-srv.cog
 general - make bot pit death behave more like player - player will fade to black and respawn without dropping a backpack, but buts will kill themselves and needlessly drop a backpack. It would be nice to emulate the player pit death behavior as much as possible. Perhaps as an initial step, the killed message could skip creating the backpack if the bot died in a pit.
@@ -65,7 +68,9 @@ general - #techdebt does the bot pit check need to be its own timer? could it ju
 
 general - #weapons #techdebt - saber_block procedure should check for 0x400 weapon flag when deflecting a projectile
 general - #weapons - (possibly unfixable) when bot dies, it gets a new thing number - mines, etc. created before the bot respawn will not score the bot points.
+general - #weapons #improvement - can we use the 0x2000 actor flag to deflect projectiles rather than creating new projectiles in the damaged message? testing indicates that creating yun in MP and assigning that flag enables deflection of projectiles even though the weapon mesh and saber blade rendering doesn't work.
 
+general - #powerups - additional powerups that could be supported: stbp, lightsaber, goggles, battery
 general - #powerups - add ability to pickup rbacta (e.g. in freezer), st backpack (e.g. in spaceport), etc. powerups
 general - #powerups - teach bots how to use bacta tanks to heal
 
@@ -75,29 +80,41 @@ general - #techdebt - there is at least one edge case where the bot may get stuc
 general - #techdebt - srv-force recalculates rank and jedirank on demand; adjust to recalculate in trigger to save on if statement limit count
 general = #techdebt - consider changing cog discovery trigger ID to "rbots" magic number (82687)
 
-general - #powerups - additional powerups that could be supported: stbp, lightsaber, goggles, battery
-
 general - #feature #special - add special flag to make bot crouch. Can set/clear the 0x10000 physics flag to control bot crouching. Need to set appropriate AI move speed in checkspeed, else bot will move at run speed while crouching.
 general - #feature #special - add special(?) flag to make bot use lightsaber to slash open a grate
 
-ctf - technical debt: CTF/botname cogstring collision - CTF uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF maps use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
+general - #techdebt - check for duplicate bot names (I see 4 duplicates in mots/kfy. Haven't checked jk/ctf); -- example command: grep -o "botname:int=[0-9]*" temple-1.jed | gsort | uniq -c
+
+ctf - #techdebt - ctf_main.cog is checking the template to see if the item is a flag, but it could simply check e.g. if (item == flag_red) instead, no need for template check
+
+ctf/kfy - #techdebt - CTF/KFY/botname cogstring collision - CTF/KFY uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF/KFY maps use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
 	--> caesars needed to do this, too
 
-kfy - implement MotS KFY support
+ctf/kfy - #bug - return timer isn't cancelled when a dropped flag/ysalamiri is picked up, so if the new carrier is killed before the previous timer finishes, that old timer may prematurely send the dropped flag/ysalamiri home. This bug is present in the original LEC implementation of CTF/KFY. It is not specific to Rbots.
 
+ctf/kfy - #improvement - simulate the bot being able to hear that a flag/ysalamiri is nearby to better replicate actual player behavior. e.g. something like if < 1.0 JKU away and HasLOS, make bot turn to face the item so he doesn't inadvertently miss the item and run away without it. For example, bot dies beside doorway, so flag is out of view for bots that are coming through the doorway, then the bot doesn't try to get the item  after coming through the doorway because it is now behind him and he doesn't see it. A real player would likely hear it and recognize that they are right next to it and turn around, especially in KFY with the distinctive ysalamiri chirping.
+
+	TODO kfy - force power bubbles support
+
+
+mots - #techdebt - cog cleanup, check for and remove unused (e.g. rbot tdets nar cog?)
 mots - feature: in team play, use personality skins, not just kyle team skins
 mots - #forcepowers - additional force powers support (powers not yet supported by rbots are still handled in the player cog skill message)
+mots - #forcepowers - force bubble handling (this is mainly for KFY, but it is technically a general MotS function and not inherently KFY-specific)
 mots - #weapons - additional weapons support (additional templates that need to be supported: flash_bombs, srailcharges, carbgun, fivepellets, scope, npconcrifle, ... (only exhaustive for first 5 mots levels supported by rbots; other levels not scanned for unsupported powerups yet)) (note: it appears that only the vaporator map contains a blastech pistol powerup placed in the map (as a greedopistol template). The bot will not be able to acquire a blastech pistol in any other map unless bot or player personalities are used to give the blastech on respawn. Other new weapons, including the scope, flash bombs, seeker rail charges, and the carbonite gun, are available in multiple map)
 mots - #weapons - I think the player can freeze and kill bots that have a supershield - supershield normally protects player from being frozen (see skill message in kyle_m.cog)
+mots - #weapons #carbonite - can players damage carbonite frozen teammates? what happens when a bot is damaged by a teammate? does he take any damage?
 
 duel - bots try to walk through force fields - maybe we can adjust paths and disable segments going through doorways when force fields are active?
 duel - polish the paths to maximize map coverage
 duel - #navigation - bots reverse direction in the duel map when capturing flag. Is this due to ctf pathinfo calc reversing path direction to other base? i.e. bot runs up to flag, then reverses direction and goes back down the way he came from, rather than continuing to run forward.
 
-arena - is it possible to teach the bots how to get to the raildet and concrifle secret areas?  how about the revive in the lower area
+arena - teach the bots how to get to the raildet and concrifle secret areas (could probably teach the bots how to get the revive in the lower area too, but this might be more complicated than it's worth)
 
 challenge - for some reason, the SAS doors don't always work for bots (gold side colored SAS has issues - red side colored SAS also has issues - need to confirm other cases)
 challenge - bots will get stuck in the elevator shaft leading up to the gold base, probably from multiple bots awaiting arrival of the elevator and both attempting to enter the shaft when it arrives (first bot gets on elevator, second bot falls into shaft). The bot is unable to get out of the shaft in most cases, blocking the elevator from arriving for other bots.
+challenge - #improvement - bots may not be reliably picking up the red key. Would the 'ignore LOS' item special flag help?
+challenge - #navigation #improvement - could improve the fan puzzle cog to not require bots to await arrival event for a short time after the fan stops. Currently, the cog only allows the bots to go down the fan shaft at the moment the fan stops; if the bot is not already awaiting the event at that moment, then the bot must wait until the next cycle. In reality, the bot could actually safely go down the shaft up to a few moments after this point as well.
 
 bes - #traps - bots don't use the force field trap
 
@@ -135,19 +152,22 @@ gantry - outer catwalk hopping, bots can't run on all of the catwalk - idea: may
 
 spaceport - #navigation - implement paths to currently unreachable areas (e.g. sniper window, top of moldy crow) and add alternate paths (e.g. drop down from concrifle room, cantina balcony) and hidden powerups (e.g. power boost)
 
-bespin - #addbotsupport - add support for bots
+bespin - #addbotsupport - add support for bots (note: improve freezer and gantry as much as possible before implementing bespin to reduce duplicated effort)
 
-tibanna - #addbotsupport - add support for bots
+tibanna - #addbotsupport #kfy - add support for bots
 
-fortress - #addbotsupport - add support for bots
+fortress - #addbotsupport #kfy - add support for bots
 
-training - #addbotsupport - add support for bots
+training - #addbotsupport #kfy - add support for bots
 
-temple - bots sometimes get temporarily stuck behind doorway extruded frames
+temple - #navigation - bots sometimes get temporarily stuck behind doorway extruded frames; Update: paths/nodes have been tweaked during KFY implementation, is this still an issue?
+temple - #navigation #improvement - can we teach the bots how to jump up the rubble to the bridge so they can go up the stairs and get the supershield? maybe it's not worth the trouble for just a supershield, though. And a few rail charges.
 
-coolant - #addbotsupport - add support for bots
+coolant - #addbotsupport #kfy - add support for bots
 
-datamaster - #documentation - consider adding a note that int values >= 2^24 (16777216) are not reliably handled by cog in some cases (e.g. SendMessageEx params, perhaps also the heap verbs -- see sige notes)
+datamaster - #documentation - consider adding a note that int values >= 2^24 (16777216) are not reliably handled by cog in some cases (e.g. SendMessageEx params, perhaps also the heap verbs -- see sige notes) -- maybe add this to the integer section on the "Notes on symbol types" popup? That section is already talking about integer min/max limits, etc.
+datamaster - #documentation - SetWallCel returns the current cel of the surface (similar to SetThingModel returning the current thing model)
+datamaster - #documentation - Add note that killed: gets sent when a powerup is taken (see ctf_main.cog)
 
 ==================== IDEAS ====================
 
@@ -207,7 +227,6 @@ datamaster - #documentation - consider adding a note that int values >= 2^24 (16
 		separate timer to randomly regenerate a lost wander vector every 3 seconds
 		tbd - lostcount changes
 		--> see lost-bot-cleanup shelve for WIP
-	TODO	stretch - mitigate infinite wait for lower elevator near gold sas entrance
 	TODO	stretch - nav cog - flag to ignore vertical distance checks when finding node for lost bot
 	TODO	stretch - nav cog - flag to ignore LOS, vertical distance checks, etc. if bot and node are in the same sector when finding node for lost bot
 	TODO	propagate changes to other maps/episodes, then squash merge back to master

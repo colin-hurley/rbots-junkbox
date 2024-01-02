@@ -85,8 +85,6 @@ general - #feature #special - add special(?) flag to make bot use lightsaber to 
 
 general - #techdebt - check for duplicate bot names (I see 4 duplicates in mots/kfy. Haven't checked jk/ctf); -- example command: grep -o "botname:int=[0-9]*" temple-1.jed | gsort | uniq -c
 
-ctf - #techdebt - ctf_main.cog is checking the template to see if the item is a flag, but it could simply check e.g. if (item == flag_red) instead, no need for template check
-
 ctf/kfy - #techdebt - CTF/KFY/botname cogstring collision - CTF/KFY uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF/KFY maps use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
 	--> caesars needed to do this, too
 
@@ -141,20 +139,17 @@ reactor - #addbotsupport - add support for bots
 
 throne - bots sometimes jump over/into pits (usually in combat mode trying to reach enemy bots)
 
-vaporator - #bug - bots can't walk on small ramp going in/out of water by trap doors - same issue as outer platform in gantry?
 vaporator - #improvement #navigation - add path to let bot slash the grate on the top floor and crouch in to get the scope (requires implementation of grate slashing and crouching capabilities for bots)
 
 cargo - #addbotsupport - add support for bots
 
 homestead - #addbotsupport - add support for bots
 
-gantry - outer catwalk hopping, bots can't run on all of the catwalk - idea: maybe an invisible 3do that sits on top of the catwalk in one sector? i.e. have the bot walk on that 3do in the problem sector instead of directly on the catwalk 3do
-
 spaceport - #navigation - implement paths to currently unreachable areas (e.g. sniper window, top of moldy crow) and add alternate paths (e.g. drop down from concrifle room, cantina balcony) and hidden powerups (e.g. power boost)
 
 bespin - #addbotsupport - add support for bots (note: improve freezer and gantry as much as possible before implementing bespin to reduce duplicated effort)
 
-tibanna - #addbotsupport #kfy - add support for bots
+tibanna - #navigation - add path to jump down from top outside area to platform with camera console?
 
 fortress - #addbotsupport #kfy - add support for bots
 
@@ -168,6 +163,7 @@ coolant - #addbotsupport #kfy - add support for bots
 datamaster - #documentation - consider adding a note that int values >= 2^24 (16777216) are not reliably handled by cog in some cases (e.g. SendMessageEx params, perhaps also the heap verbs -- see sige notes) -- maybe add this to the integer section on the "Notes on symbol types" popup? That section is already talking about integer min/max limits, etc.
 datamaster - #documentation - SetWallCel returns the current cel of the surface (similar to SetThingModel returning the current thing model)
 datamaster - #documentation - Add note that killed: gets sent when a powerup is taken (see ctf_main.cog)
+datamaster - #documentation - 0x40 AI mode flag disables cliff check, allows actors to walk over cliff edges freely
 
 ==================== IDEAS ====================
 

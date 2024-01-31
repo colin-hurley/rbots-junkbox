@@ -38,6 +38,7 @@ general - #techdebt - refactor cog ref arrays to linked list iteration (startup/
 general - #techdebt - phase out SendMessageEx based API and use triggers instead
 			--> NO!  Performance testing demonstrates that messages are more efficient (as expected) as too many triggers does hurt performance (e.g. item special info triggers)
 			--> Demonstration: compare performance in challenge map with the "if (GetThingType(item) == 5)" check enabled/disabled in findpowerups message - night and day difference, even though there is still noticeable lag even with the check enabled
+			--> Demonstration: compare performance when adding bots in the mots fortress level. This level has over 120 path nodes on almost 30 paths. Going up to just 6 bots causes the game to start stuttering from all the triggers. Meanwhile, having over 10 bots on the gantry level remains smooth.
 			--> Cogs that still use triggers that could be adjusted to use SendMessageEx: nav, nav-special, path, pathinfo, item-special, player/srv-force (skill trigger)
 			--> There is a noticeable stutter at startup when the bots all spawn. I believe this is due to triggers being sent between the nav/path/pathinfo cogs to locate the nearest node for each bot. The stutter is from all bots doing this (relatively) expensive call at the same time. Debug output for challenge map (8 bots initially) suggests about 650 nav/path/pathinfo triggers are sent for EACH of the 8 initial 'bot lost' triggers (so 8*650 = 5200 triggers total at startup to handle all initial 'bot lost')
 
@@ -50,9 +51,8 @@ general - #scoring - when score limit is set, match does not end until player re
 general - #techdebt refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead)
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
 general - some nodes are too high in existing maps (including bes, spaceport=DONE, TBD)
-general - check bot speed when walking backward. Is it the correct speed (i.e. slowed) or does bot move at same speed as when running forward?
 
-general - #navigation - capture touched message for temporary node thing to detect when bot reaches the node. This will help prevent a bot missing small nodes because of passing through them between AI pulses.
+general - #navigation - capture touched message for temporary node thing to detect when bot reaches the node. This will help prevent a bot missing small nodes because of passing through them between AI pulses. Update: Testing and code inspection suggest that the default mask flags may prevent this from working.
 
 general - #navigation - path changing - pick fairly even when multiple intersections are from a single path (e.g. path starts and ends with same node, or node occurs multiple times in the path)
 general - #navigation - lost bot - if a lost bot is nearest the node that starts and ends a looping path, the bot will always run forward on the path. I believe this is because the nav cog skips over the currently-saved candidate node instead of randomly choosing from among the "duplicate" choices. I think the logic could be altered so when the current candidate node is encountered again in another path/node index, then it can do a random check to swap the new instance with the saved instance. This can be a fair check like the intersection path change check (1 in N+1 chance to select a path at an N-way intersection)
@@ -84,6 +84,8 @@ general - #feature #special - add special flag to make bot crouch. Can set/clear
 general - #feature #special - add special(?) flag to make bot use lightsaber to slash open a grate
 
 general - #techdebt - check for duplicate bot names (I see 4 duplicates in mots/kfy. Haven't checked jk/ctf); -- example command: grep -o "botname:int=[0-9]*" temple-1.jed | gsort | uniq -c
+
+general - #botcam - player dies, botcam still sets camera when bot respawns
 
 ctf/kfy - #techdebt - CTF/KFY/botname cogstring collision - CTF/KFY uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF/KFY maps use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
 	--> caesars needed to do this, too
@@ -151,7 +153,9 @@ bespin - #addbotsupport - add support for bots (note: improve freezer and gantry
 
 tibanna - #navigation - add path to jump down from top outside area to platform with camera console?
 
-fortress - #addbotsupport #kfy - add support for bots
+fortress - #navigation #improvement - path to get concrifle/supershield under elevator relies on chance (i.e. elevator is up when the bot approaches). This works well enough, but ideally the bot should be able to decide to go down there whenever it wants and not rely on external factors to send the elevator up to frame 1. However, this improvement would likely require very sophisticated bot control that allows the bot to target the switch and fire at it with an appropriate weapon, which is beyond the current Rbots capabilities. Note that the arrival config for frame 0 of this elevator is deliberately omitted to increase the chance of a bot going under the elevator (i.e. by not waiting for it to return if it is not already at frame 0 - just enter the shaft immediately and fall down if the elevator is not there)
+fortress - #navigation #improvement - add delay for jump on path behind curtain; bot jumps immediately upon reaching the node, but he really needs to turn and face the next node first; delay can be more easily and cleanly implemented with e.g. rbot-jump.cog, rather than trying to add it with the current rbot-special.cog; with the current cogs, the solution would be to add another node between the lower and upper to give the bot a moment to turn before jumping; this is kludgey though, and the obstruction jump is enough to get the bot through the opening anyway, so it's good enough as is until a dedicated bot jumping cog is implemented.
+fortress - #navigation #improvement - add paths to use force jump to get to powerups on rooftops and in center ysalamiri room
 
 training - #addbotsupport #kfy - add support for bots
 
@@ -159,11 +163,6 @@ temple - #navigation - bots sometimes get temporarily stuck behind doorway extru
 temple - #navigation #improvement - can we teach the bots how to jump up the rubble to the bridge so they can go up the stairs and get the supershield? maybe it's not worth the trouble for just a supershield, though. And a few rail charges.
 
 coolant - #addbotsupport #kfy - add support for bots
-
-datamaster - #documentation - consider adding a note that int values >= 2^24 (16777216) are not reliably handled by cog in some cases (e.g. SendMessageEx params, perhaps also the heap verbs -- see sige notes) -- maybe add this to the integer section on the "Notes on symbol types" popup? That section is already talking about integer min/max limits, etc.
-datamaster - #documentation - SetWallCel returns the current cel of the surface (similar to SetThingModel returning the current thing model)
-datamaster - #documentation - Add note that killed: gets sent when a powerup is taken (see ctf_main.cog)
-datamaster - #documentation - 0x40 AI mode flag disables cliff check, allows actors to walk over cliff edges freely
 
 ==================== IDEAS ====================
 

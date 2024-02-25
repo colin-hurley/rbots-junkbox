@@ -34,13 +34,8 @@ general - #techdebt - retire hacked force power cogs (grip pull deadlysight blin
 
 general - #techdebt - retire hacked player and backpack cogs - Assuming another solution can be found to replace the bot score hack in kyle.cog, I believe it is possible to use the vanilla kyle.cog and pow_backpack.cog files, and to use rbot-backpack.cog for only the backpacks dropped by bots (bot srv cogs can handle force fx on player just like dark jedi cogs do, no skill trigger hacks needed)
 
-general - #techdebt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv? nav/nav-special, nav/path, path/pathinfo?)
-general - #techdebt - phase out SendMessageEx based API and use triggers instead
-			--> NO!  Performance testing demonstrates that messages are more efficient (as expected) as too many triggers does hurt performance (e.g. item special info triggers)
-			--> Demonstration: compare performance in challenge map with the "if (GetThingType(item) == 5)" check enabled/disabled in findpowerups message - night and day difference, even though there is still noticeable lag even with the check enabled
-			--> Demonstration: compare performance when adding bots in the mots fortress level. This level has over 120 path nodes on almost 30 paths. Going up to just 6 bots causes the game to start stuttering from all the triggers. Meanwhile, having over 10 bots on the gantry level remains smooth.
-			--> Cogs that still use triggers that could be adjusted to use SendMessageEx: nav, nav-special, path, pathinfo, item-special, player/srv-force (skill trigger)
-			--> There is a noticeable stutter at startup when the bots all spawn. I believe this is due to triggers being sent between the nav/path/pathinfo cogs to locate the nearest node for each bot. The stutter is from all bots doing this (relatively) expensive call at the same time. Debug output for challenge map (8 bots initially) suggests about 650 nav/path/pathinfo triggers are sent for EACH of the 8 initial 'bot lost' triggers (so 8*650 = 5200 triggers total at startup to handle all initial 'bot lost')
+general - #techdebt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv?)
+general - #techdebt - phase out remaining triggers and use SendMessageEx based API instead (all the triggers impacting performance have been refactored, so at this point this task is really just for code style consistency - i.e. use all messages and not a mix of messages and triggers. However, it may still be appropriate to use triggers for some things)
 
 general - bots may be a bit too consistently accurate on lower difficulties, adjust accuracy curve so the difference is more noticeable
 general - default bot difficulty based on player selected difficulty (GetDifficulty()), remove difficulty param from startup cog
@@ -122,6 +117,8 @@ nar - bots try to walk through the force field
 nar - bots try to run the wrong way on the conveyor belts - srv doesn't detect bot obstructed, since the "velocity" (relative to the moving floor) is "good"
 nar - #navigation - redo paths - upper area by force field needs node size tweaks to mitigate bots falling; path leading from conveyor to elevator is unidirectional, so the bot will only go up the elevator on the right side and never down (this is leftover from the old rbot-nav cog that limited path count and size)
 
+blades - #bug - bots can invalidly retrieve concrifle and railgun through the floor by walking over top of them
+
 oasis - #techdebt - custom lightning trap cog uses auto-aim (FireProjectile) while original cog does not (CreateThing). Probably done to make the lightning actually hit the bots. Or maybe just an oversight. Anyway, the auto-aim only has an effect if auto-aim is enabled in the player's setup menu options
 oasis - #navigation #improvement #techdebt - some paths can be combined into longer paths (they are split because of old nav cog limitations), some unidirectional paths can probably be adjusted for bidirectional navigation
 
@@ -156,6 +153,7 @@ tibanna - #navigation - add path to jump down from top outside area to platform 
 fortress - #navigation #improvement - path to get concrifle/supershield under elevator relies on chance (i.e. elevator is up when the bot approaches). This works well enough, but ideally the bot should be able to decide to go down there whenever it wants and not rely on external factors to send the elevator up to frame 1. However, this improvement would likely require very sophisticated bot control that allows the bot to target the switch and fire at it with an appropriate weapon, which is beyond the current Rbots capabilities. Note that the arrival config for frame 0 of this elevator is deliberately omitted to increase the chance of a bot going under the elevator (i.e. by not waiting for it to return if it is not already at frame 0 - just enter the shaft immediately and fall down if the elevator is not there)
 fortress - #navigation #improvement - add delay for jump on path behind curtain; bot jumps immediately upon reaching the node, but he really needs to turn and face the next node first; delay can be more easily and cleanly implemented with e.g. rbot-jump.cog, rather than trying to add it with the current rbot-special.cog; with the current cogs, the solution would be to add another node between the lower and upper to give the bot a moment to turn before jumping; this is kludgey though, and the obstruction jump is enough to get the bot through the opening anyway, so it's good enough as is until a dedicated bot jumping cog is implemented.
 fortress - #navigation #improvement - add paths to use force jump to get to powerups on rooftops and in center ysalamiri room
+fortress - bots can fall/swim down through the underwater grate surfaces; adjusting the adjoin flags should fix this (add impassible for AI?)
 
 training - #addbotsupport #kfy - add support for bots
 

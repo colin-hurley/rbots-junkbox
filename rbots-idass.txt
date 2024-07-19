@@ -5,13 +5,12 @@ Some of these items are simply ramblings and thoughts that I wish to hold onto f
 ==================== TICKETS ====================
 
 caesars - bots fall down jedigreedo glass elev shaft - seem to "force jump" sbx-style in midair on the way down, so no fall damage taken (I suspect the bot is trying to "jump" over an obstruction) -- update: 2022-09-30 - cannot reproduce, is this still an issue?
-caesars - bot gets trapped in elevator sharft below jedigreedo room, doesn't try to jump out of shaft, keeps trying to jump/go up to top of shaft
+caesars - bot gets trapped in elevator shaft below jedigreedo room, doesn't try to jump out of shaft, keeps trying to jump/go up to top of shaft
 caesars - bots try to attack each other through glass
 caesars - pathing around corner past kitchen ramp to elevator on casino floor is rough
-caesars - going up waterfall, jumping out of water to go up elevator - not reliable
-caesars - waterfall nodes in water - bots strafe swim around them but fail to reach them - not reliable
 caesars - bot going down waterfall was lookup up at the rooftop bridge thing - was he looking at an enemy or the repeater/power cells?  he wasn't shooting at the time
 caesars - more casino area paths
+caesars - fix path node heights, some are too high
 caesars - add elevator shaft "middle" nodes or extend bot lost timeout somehow
 caesars - paths through slashable grate vents?
 caesars - disable 'touched' message for hotel elevator - walking into the elevator walls triggers elevator movement
@@ -29,23 +28,19 @@ general - #special #revisit - refine bot special info to accept parameters to cu
 
 general - improve blinded bot behavior - right now, bots simply move to a random location. Investigate more sophisticated behavior, such as navigating paths but simulate not being able to see well (e.g. move to node position +/- random vector offset based on difficulty?)
 
-general - #techdebt - retire hacked force power cogs (grip pull deadlysight blinding) - I believe it is possible to reimplement the bot force power handling so custom force_*.cog files are not needed. The bots can return an appropriate value from the skill message to let the original force power cog handle the actor effects (just as the actor_*.cog files do). The bot force cog will need to implement the required effects on the player (just as the darkjedi_*.cog files do) as well as on other bots (like kyle.cog? or like darkjedi_*.cog? either way would probably work. Probably darkjedi_*.cog style would be cleaner as most of the handling code would then be the same for both bots and players, rather than having a skill-like handler for bots and a force_*.cog like handler for players).
-		--> UPDATE: This may be more trouble than it's worth. Force blinding just sets the 0x800/blind flag on actors without sending a skill message, and some of the MotS powers (including push and chainlight) do likewise and apply effects to actors without sending a skill message. A compromise may be to keep the hacked force powers for "best/most authentic experience" but stub some skill message content that will allow the vanilla force cogs to still interact with the bots for "acceptable experience" in case the nohotkeys patch cannot be used for some reason.
+general - #backpack #techdebt - retire hacked player and backpack cogs - Assuming another solution can be found to replace the bot score hack in kyle.cog, I believe it is possible to use the vanilla kyle.cog and pow_backpack.cog files, and to use rbot-backpack.cog for only the backpacks dropped by bots (bot srv cogs can handle force fx on player just like dark jedi cogs do, no skill trigger hacks needed)
+general - #backpack - refactor backpack cogs to store more backpacks (see branch 'more-backpack-slots' for 20 slot expansion, which works but is very close to the symbol limit and won't allow addition of MotS inventory slots to the backpack); one possibility is to use the heap verbs; alternatively, compress the data so it can be contained in fewer variables (e.g. bit mask for weapon possession, perhaps encode multiple ammo counts in a single int, etc.)
 
-general - #techdebt - retire hacked player and backpack cogs - Assuming another solution can be found to replace the bot score hack in kyle.cog, I believe it is possible to use the vanilla kyle.cog and pow_backpack.cog files, and to use rbot-backpack.cog for only the backpacks dropped by bots (bot srv cogs can handle force fx on player just like dark jedi cogs do, no skill trigger hacks needed)
-
-general - #techdebt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv?)
+general - #techdebt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv?, nav/bot node slots)
 general - #techdebt - phase out remaining triggers and use SendMessageEx based API instead (all the triggers impacting performance have been refactored, so at this point this task is really just for code style consistency - i.e. use all messages and not a mix of messages and triggers. However, it may still be appropriate to use triggers for some things)
 
-general - bots may be a bit too consistently accurate on lower difficulties, adjust accuracy curve so the difference is more noticeable
-general - default bot difficulty based on player selected difficulty (GetDifficulty()), remove difficulty param from startup cog
 general - higher bot difficulty idea - if bot and target are about level with each other (Z diff < some small JKU value), shoot explosive projectiles (primary fire for raildet and concrifle) at ground by target instead of trying to hit target directly?  If the bot has trouble hitting the target with a direct shot, shooting the ground like a player often would might be better
 
 general - #scoring - when score limit is set, match does not end until player reaches the score limit and then dies. Note: player score must not go below the limit as a result of dying. For example, if the player reaches the limit and then gets a suicide, the score is reduced to limit-1 and the match doesn't end. However, if the player reaches the limit and then gets killed by a bot, the game counts it as a suicide and reduces the score, but the startup cog corrects this and returns the player score to the limit, so the match will end. Note: CTF correctly ends when score limit is reached. CTF uses jkEndLevel(1) to end the level after displaying scores.
 
 general - #techdebt refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead)
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
-general - some nodes are too high in existing maps (including bes, spaceport=DONE, TBD)
+general - some nodes are too high in existing maps (including nar, bes, spaceport=DONE, TBD)
 
 general - #navigation - capture touched message for temporary node thing to detect when bot reaches the node. This will help prevent a bot missing small nodes because of passing through them between AI pulses. Update: Testing and code inspection suggest that the default mask flags may prevent this from working.
 
@@ -58,16 +53,50 @@ general - #navigation #arrival #improvement - review default 30 second arrival t
 general - #navigation #arrival #bug - arrival cog attempts to generate duplicate/redundant arrival events when same arriver is used in multiple slots. I think what is happening is, when the arriver is used in multiple slots, the game will send multiple arrived messages to the cog, one for each slot where the arriver is used, because of the arriver being a linked symbol passed in from the JKL. For example, elevators often use two slots, one for the bottom floor, and the other for the top floor, so the arrival cog would receive two arrived messages. Fortunately, what would be redundant arrival events are suppressed thanks to the waiting0-9 vars (i.e. the first event gets sent while waitingX is 1, but sending the event sets waitingX to 0, so the second event gets suppressed). The good news is, even if the events weren't suppressed, they are still technically correct for the situation (just redundant), so no unexpected side effects should occur other than redundant triggers being sent.
 
 general - bot shields do not function exactly like player shields - at 50 shields, damage starts to be split between shields and health for players, but for bots, the shields must be depleted completely before the bot will start taking health damage. See TODO in rbot-srv.cog
-general - make bot pit death behave more like player - player will fade to black and respawn without dropping a backpack, but buts will kill themselves and needlessly drop a backpack. It would be nice to emulate the player pit death behavior as much as possible. Perhaps as an initial step, the killed message could skip creating the backpack if the bot died in a pit.
+general - make bot pit death behave more like player - player will fade to black and respawn, but buts will kill themselves and continue falling until the 5 second respawn timer elapses. Note that a player does, in fact, drop a backpack even when killed in a pit with screen fade death.
 general - #techdebt does the bot pit check need to be its own timer? could it just be part of the ordinary AI pulse? Are there other periodic timers that could also be refactored this way?
 
+general - #forcepowers - implement gradual deterioration of shield for force protection instead of simply shitting off the power (see TODO in rbot-srv-force.cog)
+general - #forcepowers - implement rank-based mana cap for bots (similar to players, see TODO in rbot-srv-force.cog)
+
+general - #weapons - implement thermal detonator use
+general - #weapons - implement sequencer charge use; when special info arrives, set flag so at next invocation of attacktarget, bot will switch to sequencer charges and lay a mine at the earliest opportunity (like setting the jump flag in rbot-srv.cog when bot is in the air and receives jump special info).
+general - #weapons - check saber damage to improve consistency with base damage in weap_saber.cog (see TODO in rbot-srv-weapons.cog)
+general - #weapons - fix saber left/right attack direction detection (absolute versus relative vector math, see TODO in rbot-srv-weapons.cog)
 general - #weapons #techdebt - saber_block procedure should check for 0x400 weapon flag when deflecting a projectile
 general - #weapons - (possibly unfixable) when bot dies, it gets a new thing number - mines, etc. created before the bot respawn will not score the bot points.
 general - #weapons #improvement - can we use the 0x2000 actor flag to deflect projectiles rather than creating new projectiles in the damaged message? testing indicates that creating yun in MP and assigning that flag enables deflection of projectiles even though the weapon mesh and saber blade rendering doesn't work.
+general - #weapons #techdebt - retire fire2dist and mindist symbols; they are only used in edge cases and could be inlined in firetarget: rather than taking up valuable symbol slots
+general - #weapons #techdebt - make bot friendly fire handling function the same way the engine handles player/player friendly fire. Namely, only damage to health is prevented. Damage from teammates will still drain shields and free the player from carbonite (mots). See teamcarb sandbox findings.txt for full details, or simply run two JK instances in a team MP deathmatch and observe effects of one player damaging the other.
+general - #weapons #techdebt - clean up weapon/ammo powerup priority checks.  (1) reduce redundancy/verbosity of if statements (e.g. instead of "(!weapX && GetThingTemplate(...) == tmp_weapx) || (!weapx && GetThingTemplate(...) == tmp_fpweapx) || ...", try "(!weapx && (GetThingTemplate(...) == tmp_weapx || GetThingTemplate(...) == tmp_fpweapx)) || ..."). (2) add weapon powerups to ammo template checks (i.e. if bot needs carbonite ammo, check for both the gun and the ammo powerups, not just the ammo powerup)
+general - #weapons - simulate player reaction time (random delay to start firing upon spotting a target, lower difficulties have longer possible delay, higher difficulties react more quickly)
+	proposed logic
+		on ai pulse
+			if target != -1
+				kill lost target timer
+				set difficulty randomized timer for lost target
+				if found target weaponmode 0x2 not set
+					set found target weaponmode
+					set difficulty randomized timer for found target
+			call attacktarget
+		on attacktarget
+			add check - if attacking target weaponmode 0x4 is not set, return before firing weapon (add to firetarget message?)
+		on found target timer
+			set attacking target weaponmode 0x4 and call attacktarget message
+		on lost target timer
+			kill found target timer
+			clear found target 0x2 and attacking target 0x4 weaponmode
+	alternate logic idea:
+		on ai pulse
+			if target == -1
+				if not warming up
+					start rapid timer to count up to warmup time and start firing
+			else
+				if not cooling down
+					start rapid timer to count down to zero
 
 general - #powerups - additional powerups that could be supported: stbp, lightsaber, goggles, battery
 general - #powerups - add ability to pickup rbacta (e.g. in freezer), st backpack (e.g. in spaceport), etc. powerups
-general - #powerups - teach bots how to use bacta tanks to heal
 
 general - #techdebt - following srv-weapons refactoring, srv move procedure may now allow bots to move when they shouldn't be able to (e.g. gripped, awaiting event)
 general - #techdebt - there is at least one edge case where the bot may get stuck awaiting an event indefinitely. For example, in challenge, teleport the bot into the elevator shaft leading up to the gold base. If the bot has an arrival_event set, he will wait at the node for the elevator to reach frame 1. Normally, this would time out and the bot would continue on his way, but if he starts seeking a powerup while holding position waiting for the event, then the bot will remain indefinitely stuck because the bot lost timer is being reset by the item seeking. Unsure if the problem can be reproduced without the rbot-admin-teleport function.
@@ -75,12 +104,13 @@ general - #techdebt - there is at least one edge case where the bot may get stuc
 general - #techdebt - srv-force recalculates rank and jedirank on demand; adjust to recalculate in trigger to save on if statement limit count
 general = #techdebt - consider changing cog discovery trigger ID to "rbots" magic number (82687)
 
-general - #feature #special - add special flag to make bot crouch. Can set/clear the 0x10000 physics flag to control bot crouching. Need to set appropriate AI move speed in checkspeed, else bot will move at run speed while crouching.
 general - #feature #special - add special(?) flag to make bot use lightsaber to slash open a grate
 
 general - #techdebt - check for duplicate bot names (I see 4 duplicates in mots/kfy. Haven't checked jk/ctf); -- example command: grep -o "botname:int=[0-9]*" temple-1.jed | gsort | uniq -c
 
 general - #botcam - player dies, botcam still sets camera when bot respawns
+
+general - #teams - player friendly fire damage from bots handling needs to be revised; players should take shield/force armor damage from teammates, only damage to health is suppressed by the game engine. (Original question through which this discrepancy was discovered: can players damage carbonite frozen teammates? what happens when a bot is damaged by a teammate? does he take any damage?  Answer: no health damage is inflicted by teammates. The game runs all damaged: messages first, so shields and force armor will be drained, but then the damage will be changed to zero if the damager is on the same team, so the victim will never take any health damage from teammates.) The rbot-srv.cog has already been modified to make bots behave this way, but the rbot-player.cog still suppresses ALL damage, so in addition to no health damage, the player also takes no shield/force armor damage, which is inconsistent with normal player-player friendly fire behavior. Need to devise a way to prevent ONLY health damage after all other damage has been applied, if it's possible at all. We could manually invoke the damaged: message in inventory bin cogs (protection, shields) and capture cog (if set), but linked cogs would not be invoked (maybe this tradeoff is ok?)
 
 ctf/kfy - #techdebt - CTF/KFY/botname cogstring collision - CTF/KFY uses cogstrings in the 10xx range, which conflict with the default bot name strings needed for rbots - as a workaround, the CTF/KFY maps use the 15xx range for botnames instead of 10xx - all bot names add +500 to match this change
 	--> caesars needed to do this, too
@@ -91,14 +121,18 @@ ctf/kfy - #improvement - simulate the bot being able to hear that a flag/ysalami
 
 	TODO kfy - force power bubbles support
 
+	TODO why do bots seem to frequently die in a glitchy walking anim instead of playing death anim when force grip etc are used to kill them?
+	TODO verify that saber blocking code in rbot-player.cog damaged: is truly needed (i.e. does saber not auto block saber damage projectiles? Apparently it is needed to block saber attacks (testing confirmed). So, can the bot saber attacks be made to be deflectable by the saber? e.g. a weapon flag?
 
+jk - #techdebt #sdk - exclude m10colmn.3do from sdk, this is an asset for oasis
+
+mots - #weapons - implement flash bomb use in mots
 mots - #techdebt - cog cleanup, check for and remove unused (e.g. rbot tdets nar cog?)
 mots - feature: in team play, use personality skins, not just kyle team skins
 mots - #forcepowers - additional force powers support (powers not yet supported by rbots are still handled in the player cog skill message)
 mots - #forcepowers - force bubble handling (this is mainly for KFY, but it is technically a general MotS function and not inherently KFY-specific)
-mots - #weapons - additional weapons support (additional templates that need to be supported: flash_bombs, srailcharges, carbgun, fivepellets, scope, npconcrifle, ... (only exhaustive for first 5 mots levels supported by rbots; other levels not scanned for unsupported powerups yet)) (note: it appears that only the vaporator map contains a blastech pistol powerup placed in the map (as a greedopistol template). The bot will not be able to acquire a blastech pistol in any other map unless bot or player personalities are used to give the blastech on respawn. Other new weapons, including the scope, flash bombs, seeker rail charges, and the carbonite gun, are available in multiple map)
-mots - #weapons - I think the player can freeze and kill bots that have a supershield - supershield normally protects player from being frozen (see skill message in kyle_m.cog)
-mots - #weapons #carbonite - can players damage carbonite frozen teammates? what happens when a bot is damaged by a teammate? does he take any damage?
+mots - #feature - personaolity support (weapons, force powers, etc.). The 0x1000 MP mode flag can be checked to reliably determine whether MotS personalities are in use or not (0x1000 will be set if personalities are NOT being used)
+mots - #weapons - looks like mots always lets you pick up gun powerups even if you have the gun and full ammo already? JK is conditional. Make bots do the same?
 
 duel - bots try to walk through force fields - maybe we can adjust paths and disable segments going through doorways when force fields are active?
 duel - polish the paths to maximize map coverage
@@ -128,7 +162,7 @@ valley - sometimes bot jumping onto elevator in lower area isn't quite right due
 freezer - item seeking causes bots to jump over/into pits in center area
 freezer - there was a weird case under the platform by the elevator/windows where the bot wasn't running and could only jump (like the outer catwalk in the gantry map)
 freezer - bots sometimes/often can't properly ride the rising air by the elevators up toward the central area (update: bots seem to fail riding it up when they first enter the room, but after a 'bot lost', they turn around, walk into the stream, and then successfully ride it up to the upper level)
-freezer - #traps - bots don't use the carbonite pit trap
+freezer - #traps - teach bots to activate the carbonite pit trap
 
 canopy - #addbotsupport - add support for bots
 
@@ -145,6 +179,9 @@ cargo - #addbotsupport - add support for bots
 homestead - #addbotsupport - add support for bots
 
 spaceport - #navigation - implement paths to currently unreachable areas (e.g. sniper window, top of moldy crow) and add alternate paths (e.g. drop down from concrifle room, cantina balcony) and hidden powerups (e.g. power boost)
+spaceport - #navigation - is there a spawn point in the lightsaber chapel room that has no LOS with path nodes? Seems like bots sometimes spawn in there but are lost at first until they wander into the middle of the room.
+spaceport - #navigation - bots don't see the seeker charges in the upper room
+spaceport - #navigation - bots should ignore some powerups, including railcharges by the stack of crates
 
 bespin - #addbotsupport - add support for bots (note: improve freezer and gantry as much as possible before implementing bespin to reduce duplicated effort)
 
@@ -153,7 +190,7 @@ tibanna - #navigation - add path to jump down from top outside area to platform 
 fortress - #navigation #improvement - path to get concrifle/supershield under elevator relies on chance (i.e. elevator is up when the bot approaches). This works well enough, but ideally the bot should be able to decide to go down there whenever it wants and not rely on external factors to send the elevator up to frame 1. However, this improvement would likely require very sophisticated bot control that allows the bot to target the switch and fire at it with an appropriate weapon, which is beyond the current Rbots capabilities. Note that the arrival config for frame 0 of this elevator is deliberately omitted to increase the chance of a bot going under the elevator (i.e. by not waiting for it to return if it is not already at frame 0 - just enter the shaft immediately and fall down if the elevator is not there)
 fortress - #navigation #improvement - add delay for jump on path behind curtain; bot jumps immediately upon reaching the node, but he really needs to turn and face the next node first; delay can be more easily and cleanly implemented with e.g. rbot-jump.cog, rather than trying to add it with the current rbot-special.cog; with the current cogs, the solution would be to add another node between the lower and upper to give the bot a moment to turn before jumping; this is kludgey though, and the obstruction jump is enough to get the bot through the opening anyway, so it's good enough as is until a dedicated bot jumping cog is implemented.
 fortress - #navigation #improvement - add paths to use force jump to get to powerups on rooftops and in center ysalamiri room
-fortress - bots can fall/swim down through the underwater grate surfaces; adjusting the adjoin flags should fix this (add impassible for AI?)
+fortress - bots can fall/swim down through the underwater grate surfaces; adjusting the adjoin flags should fix this (clear 0x2 adjoin flag?); update: this may not be perfectly fixable. Clearing the 0x2 adjoin flag will cause projectiles to not go through the grate anymore.
 
 training - #addbotsupport #kfy - add support for bots
 

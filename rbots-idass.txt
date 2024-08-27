@@ -16,12 +16,12 @@ caesars - paths through slashable grate vents?
 caesars - disable 'touched' message for hotel elevator - walking into the elevator walls triggers elevator movement
 		--> well, maybe? we probably would want a touched message to move the elevator if the bot gets caught underneath the elevator.  Since the elevator move duration is so long, maybe it doesn't matter here since the bot will normally jump out of the shaft in time, and in the rare exception case, the bot will kill itself if it gets trapped under the elevator
 
-general - #techdebt - reorder level cogs to match the original LEC levels (cogs for doors, force fields, etc. that were in the original map by LEC). This will aid in comparing bot-enabled maps with their LEC counterparts.
-
 general - #techdebt - consider using maven wrapper (mvnw) to make it easier for folks to build the project (still need to manually build dependencies, but it would be good to eliminate the need for manual Maven install)
 
 general - #techdebt - test.bat scripts don't work reliably on Windows 10 (the %~s1 param doesn't produce a short file path if 8.3 names are not enabled, causing the game launch to fail)
 general - #techdebt - test.bat scripts launch GOG versions of JK/MotS in fullscreen mode (GOG versions invert the meaning of the -windowgui option) ; UPDATE 11/23 - my GOG version launches in full screen regardless of whether -windowgui is used or not, and regardless of whether JK.EXE or JKStart.exe is invoked
+
+general - #misc - when player respawns, consider disabling that respawn point for bots temporarily as if a bot had just respawned there. rbot-startup.cog will need to find the corresponding spawnpoint in the newplayer message
 
 general - #special #revisit - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.). Update: This may be needlessly generic. rbot-elev-call.cog was much easier to implement with just specifying the nodes it needs and letting it worry about the map state logic, rather than trying to make a generic conditional activate trigger. It may be worthwhile to abandon the activate trigger and just model the other cogs after rbot-elev-call.cog and rbot-door-switch.cog going forward.
 general - #special #revisit - refine bot special info to accept parameters to customize behavior (e.g. jump height scale for precision jumping). Update: It may be worthwhile to move these sort of special behaviors to dedicated action cogs (e.g. make a new cog named rbot-jump.cog or something), or fold into the cog that knows the conditions (e.g. rbot-elev-call.cog) rather than trying to roll a generic special cog for all special actions.
@@ -34,13 +34,15 @@ general - #backpack - refactor backpack cogs to store more backpacks (see branch
 general - #techdebt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv?, nav/bot node slots)
 general - #techdebt - phase out remaining triggers and use SendMessageEx based API instead (all the triggers impacting performance have been refactored, so at this point this task is really just for code style consistency - i.e. use all messages and not a mix of messages and triggers. However, it may still be appropriate to use triggers for some things)
 
-general - higher bot difficulty idea - if bot and target are about level with each other (Z diff < some small JKU value), shoot explosive projectiles (primary fire for raildet and concrifle) at ground by target instead of trying to hit target directly?  If the bot has trouble hitting the target with a direct shot, shooting the ground like a player often would might be better
+general - #weapons - higher bot difficulty idea - if bot and target are about level with each other (Z diff < some small JKU value), shoot explosive projectiles (primary fire for raildet and concrifle) at ground by target instead of trying to hit target directly?  If the bot has trouble hitting the target with a direct shot, shooting the ground like a player often would might be better
+
+general - #weapons #lightsaber - make bot sometimes wait between saber swings to "block" attacks (weap_saber.cog sets 0x2000 flag after 0.5 seconds after the fire key is released. Perhaps this could be simulated somehow? Probably cancel pending bot attack timers if block occurs in this case?). Bots essentially never block saber attacks because they are always attacking (i.e. 0x2000 gets restored after cooldown, not 0.5 seconds after hitting/releasing fire key like for players)
 
 general - #scoring - when score limit is set, match does not end until player reaches the score limit and then dies. Note: player score must not go below the limit as a result of dying. For example, if the player reaches the limit and then gets a suicide, the score is reduced to limit-1 and the match doesn't end. However, if the player reaches the limit and then gets killed by a bot, the game counts it as a suicide and reduces the score, but the startup cog corrects this and returns the player score to the limit, so the match will end. Note: CTF correctly ends when score limit is reached. CTF uses jkEndLevel(1) to end the level after displaying scores.
 
 general - #techdebt refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead)
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
-general - some nodes are too high in existing maps (including nar, bes, spaceport=DONE, TBD)
+general - some nodes are too high in existing maps (including nar=DONE, bes, spaceport=DONE, TBD)
 
 general - #navigation - capture touched message for temporary node thing to detect when bot reaches the node. This will help prevent a bot missing small nodes because of passing through them between AI pulses. Update: Testing and code inspection suggest that the default mask flags may prevent this from working.
 
@@ -61,13 +63,7 @@ general - #forcepowers - implement rank-based mana cap for bots (similar to play
 
 general - #weapons - implement thermal detonator use
 general - #weapons - implement sequencer charge use; when special info arrives, set flag so at next invocation of attacktarget, bot will switch to sequencer charges and lay a mine at the earliest opportunity (like setting the jump flag in rbot-srv.cog when bot is in the air and receives jump special info).
-general - #weapons - check saber damage to improve consistency with base damage in weap_saber.cog (see TODO in rbot-srv-weapons.cog)
-general - #weapons - fix saber left/right attack direction detection (absolute versus relative vector math, see TODO in rbot-srv-weapons.cog)
-general - #weapons #techdebt - saber_block procedure should check for 0x400 weapon flag when deflecting a projectile
 general - #weapons - (possibly unfixable) when bot dies, it gets a new thing number - mines, etc. created before the bot respawn will not score the bot points.
-general - #weapons #improvement - can we use the 0x2000 actor flag to deflect projectiles rather than creating new projectiles in the damaged message? testing indicates that creating yun in MP and assigning that flag enables deflection of projectiles even though the weapon mesh and saber blade rendering doesn't work.
-general - #weapons #techdebt - retire fire2dist and mindist symbols; they are only used in edge cases and could be inlined in firetarget: rather than taking up valuable symbol slots
-general - #weapons #techdebt - make bot friendly fire handling function the same way the engine handles player/player friendly fire. Namely, only damage to health is prevented. Damage from teammates will still drain shields and free the player from carbonite (mots). See teamcarb sandbox findings.txt for full details, or simply run two JK instances in a team MP deathmatch and observe effects of one player damaging the other.
 general - #weapons #techdebt - clean up weapon/ammo powerup priority checks.  (1) reduce redundancy/verbosity of if statements (e.g. instead of "(!weapX && GetThingTemplate(...) == tmp_weapx) || (!weapx && GetThingTemplate(...) == tmp_fpweapx) || ...", try "(!weapx && (GetThingTemplate(...) == tmp_weapx || GetThingTemplate(...) == tmp_fpweapx)) || ..."). (2) add weapon powerups to ammo template checks (i.e. if bot needs carbonite ammo, check for both the gun and the ammo powerups, not just the ammo powerup)
 general - #weapons - simulate player reaction time (random delay to start firing upon spotting a target, lower difficulties have longer possible delay, higher difficulties react more quickly)
 	proposed logic
@@ -94,6 +90,7 @@ general - #weapons - simulate player reaction time (random delay to start firing
 			else
 				if not cooling down
 					start rapid timer to count down to zero
+
 
 general - #powerups - additional powerups that could be supported: stbp, lightsaber, goggles, battery
 general - #powerups - add ability to pickup rbacta (e.g. in freezer), st backpack (e.g. in spaceport), etc. powerups
@@ -122,9 +119,6 @@ ctf/kfy - #improvement - simulate the bot being able to hear that a flag/ysalami
 	TODO kfy - force power bubbles support
 
 	TODO why do bots seem to frequently die in a glitchy walking anim instead of playing death anim when force grip etc are used to kill them?
-	TODO verify that saber blocking code in rbot-player.cog damaged: is truly needed (i.e. does saber not auto block saber damage projectiles? Apparently it is needed to block saber attacks (testing confirmed). So, can the bot saber attacks be made to be deflectable by the saber? e.g. a weapon flag?
-
-jk - #techdebt #sdk - exclude m10colmn.3do from sdk, this is an asset for oasis
 
 mots - #weapons - implement flash bomb use in mots
 mots - #techdebt - cog cleanup, check for and remove unused (e.g. rbot tdets nar cog?)
@@ -146,14 +140,11 @@ challenge - #improvement - bots may not be reliably picking up the red key. Woul
 challenge - #navigation #improvement - could improve the fan puzzle cog to not require bots to await arrival event for a short time after the fan stops. Currently, the cog only allows the bots to go down the fan shaft at the moment the fan stops; if the bot is not already awaiting the event at that moment, then the bot must wait until the next cycle. In reality, the bot could actually safely go down the shaft up to a few moments after this point as well.
 
 bes - #traps - bots don't use the force field trap
+bes - #navigation - bots can now use crouching to go under the lower level platform
 
-nar - bots try to walk through the force field
-nar - bots try to run the wrong way on the conveyor belts - srv doesn't detect bot obstructed, since the "velocity" (relative to the moving floor) is "good"
-nar - #navigation - redo paths - upper area by force field needs node size tweaks to mitigate bots falling; path leading from conveyor to elevator is unidirectional, so the bot will only go up the elevator on the right side and never down (this is leftover from the old rbot-nav cog that limited path count and size)
+nar - #powerups #improvement - bots try to walk through the force field and can pick up powerups through the force field. Could this be resolved by using a customizer cog to handle pickup of these powerups?  That is, could a zone-like mechanism be used in combination with the force field state to decide whether to permit the pickup?
+nar - #traps #improvement - activate turret trap more purposefully (right now it's just piggybacking on the trigger to open the force field)
 
-blades - #bug - bots can invalidly retrieve concrifle and railgun through the floor by walking over top of them
-
-oasis - #techdebt - custom lightning trap cog uses auto-aim (FireProjectile) while original cog does not (CreateThing). Probably done to make the lightning actually hit the bots. Or maybe just an oversight. Anyway, the auto-aim only has an effect if auto-aim is enabled in the player's setup menu options
 oasis - #navigation #improvement #techdebt - some paths can be combined into longer paths (they are split because of old nav cog limitations), some unidirectional paths can probably be adjusted for bidirectional navigation
 
 valley - pathing through lower level could be improved for reliability, sometimes bots don't quite navigate the path exactly as intended and the bot will end up behind a crate or close to/under the elevator as a result
@@ -163,20 +154,24 @@ freezer - item seeking causes bots to jump over/into pits in center area
 freezer - there was a weird case under the platform by the elevator/windows where the bot wasn't running and could only jump (like the outer catwalk in the gantry map)
 freezer - bots sometimes/often can't properly ride the rising air by the elevators up toward the central area (update: bots seem to fail riding it up when they first enter the room, but after a 'bot lost', they turn around, walk into the stream, and then successfully ride it up to the upper level)
 freezer - #traps - teach bots to activate the carbonite pit trap
+freezer - #weapons - add support for npconcrifle powerup in carbonite freezing chamber
 
 canopy - #addbotsupport - add support for bots
 
 palace - #addbotsupport - add support for bots
+	templates for customizer cog:
+		#template	tmp_mdm04weap9=+mdm04concrifle		local
+		#template	tmp_mdm04weap9decoy=+mdm04concrifledecoy	local
 
 reactor - #addbotsupport - add support for bots
-
-throne - bots sometimes jump over/into pits (usually in combat mode trying to reach enemy bots)
 
 vaporator - #improvement #navigation - add path to let bot slash the grate on the top floor and crouch in to get the scope (requires implementation of grate slashing and crouching capabilities for bots)
 
 cargo - #addbotsupport - add support for bots
 
 homestead - #addbotsupport - add support for bots
+
+gantry - #navigation - bots will jump off the platform outside the building, implement zoning or some similar feature to prevent bots from trying to jump/attack across the gap)
 
 spaceport - #navigation - implement paths to currently unreachable areas (e.g. sniper window, top of moldy crow) and add alternate paths (e.g. drop down from concrifle room, cantina balcony) and hidden powerups (e.g. power boost)
 spaceport - #navigation - is there a spawn point in the lightsaber chapel room that has no LOS with path nodes? Seems like bots sometimes spawn in there but are lost at first until they wander into the middle of the room.
@@ -256,7 +251,6 @@ coolant - #addbotsupport #kfy - add support for bots
 		stop timer on bot death or nav returning a node
 		separate timer to randomly regenerate a lost wander vector every 3 seconds
 		tbd - lostcount changes
-		--> see lost-bot-cleanup shelve for WIP
 	TODO	stretch - nav cog - flag to ignore vertical distance checks when finding node for lost bot
 	TODO	stretch - nav cog - flag to ignore LOS, vertical distance checks, etc. if bot and node are in the same sector when finding node for lost bot
 	TODO	propagate changes to other maps/episodes, then squash merge back to master
@@ -304,28 +298,6 @@ coolant - #addbotsupport #kfy - add support for bots
 			}
 		}
 
-** Saber fighting improvements **
-	+rbotsaberhit1 template is not used.
-	srv timer id 200 and 201 are the same code
-	When bot blocks player saber, +ssparks_blood gets created (by game engine) instead of +ssparks_saber.
-	Bot saber attacks (+rbotsaber1/2 templates) don't create any of the +ssparks_* templates.
-
-	Idea: Add class cog to +rbotsaber1/2 that can receive feedback from the srv cog and create the appropriate explosion template.
-	For example, the +rbotsaber1/2 templates could have a class cog resembling:
-		user0:
-			exp = GetParam(0);
-			hit_type = GetParam(1);
-			SetThingUserData(exp, hit_type);
-			return;
-		removed:  // or timer+DestroyThing()
-			
-			if (GetThingUserData(exp) == 1) // create +ssparks_saber
-			else // create ++ssparks_blood
-			return;
-	The srv cog could send a user0 message to the class cog of the damager when the bot has blocked the saber attack.
-	Actually, there's a parent/child discrepancy here that needs to be resolved. +rbotsaber1/2 is what the srv cog would have as 'damager' but the message needs to be delivered to the explosion thing
-
-	Demo: See branch experiment-saber-fx to demo creation of FX things by srv cog
 
 ==================== UNFIXABLE? ====================
 
@@ -337,3 +309,7 @@ general - when bots use force persuasion, player cannot see them (except on over
 			--> This issue does not apply to MotS - in the MotS version, bots are correctly shown/hidden by the engine as expected AND have force twinkle stars!
 			--> workaround - there is a hack in the srv force cog to show/hide the bot based on whether bin 23 (force seeing) for the local player is active
 			--> If player's force seeing is active when bot activates force persuasion, the bot momentarily "blinks" (geo 0) until the hack pulse sets it back (to geo 4).
+
+general - #weapons #lightsaber - is there any way (e.g. a weapon flag) to tweak the +rbotsaber template so the game's saber engine will auto-block it, instead of needing custom block/damage code in damaged: messages?
+
+general - #weapons #lightsaber - any way to fix it so we create flesh sparks instead of wall sparks after actor/player is dead? (i.e. the 0x200 thing flag prevents damaged from running and ParseArg'ing the template, can we fix this?) (see notes in rbot-player.cog and rbot-srv-weapons.cog)

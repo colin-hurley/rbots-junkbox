@@ -25,10 +25,61 @@ general - #misc - when player respawns, consider disabling that respawn point fo
 
 general - #special #revisit - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.). Update: This may be needlessly generic. rbot-elev-call.cog was much easier to implement with just specifying the nodes it needs and letting it worry about the map state logic, rather than trying to make a generic conditional activate trigger. It may be worthwhile to abandon the activate trigger and just model the other cogs after rbot-elev-call.cog and rbot-door-switch.cog going forward.
 general - #special #revisit - refine bot special info to accept parameters to customize behavior (e.g. jump height scale for precision jumping). Update: It may be worthwhile to move these sort of special behaviors to dedicated action cogs (e.g. make a new cog named rbot-jump.cog or something), or fold into the cog that knows the conditions (e.g. rbot-elev-call.cog) rather than trying to roll a generic special cog for all special actions.
+	examples:
+		rbot-jump.cog
+			thing node=-1 nolink
+			int rundir=-1
+			flex delay=0.0
+			flex scale=1.0
+
+		rbot-dropmine.cog
+			thing node=-1 nolink
+			int rundir=-1
+			flex delay=0.0
+			flex chance=1.0
+
+		rbot-slashgrate.cog (or rbot-grate.cog?)
+			surface grate=-1
+			surface grateback=-1
+			thing node=-1 nolink
+			thing nodeback=-1 nolink
+			int rundir=-1
+			int rundirback=-1
+
+		rbot-crouch.cog
+			thing node0..3=-1 nolink
+			int rundir=-1
+			flex delay=0.0
+			flex duration=3.0
+		rbot-crouch-sector.cog
+			sector sc0..3=-1 mask=0x404
+			int rundir=-1
+		rbot-crouch-surface.cog
+			surface sf0=-1 mask=0x404
+			int rundir=-1
+
+		rbot-movespeed.cog
+			thing node0..3=-1 nolink
+			int rundir=-1
+			flex delay=0.0
+			flex duration=3.0
+			flex scale=1.0
+		rbot-movespeed-sector.cog
+			sector sc0..3=-1 mask=0x404
+			int rundir=-1
+			flex scale=1.0
+		rbot-movespeed-surface.cog
+			surface sf0..3=-1 mask=0x404
+			int rundir=-1
+			flex scale=1.0
+
+		rbot-ai-override.cog? (no cliff check, no item seek, no combat roam) (rbot-roaming(|-sector|-surface).cog?)
+			int itemroam=1
+			int combatroam=1
+			int cliffcheck=1
 
 general - improve blinded bot behavior - right now, bots simply move to a random location. Investigate more sophisticated behavior, such as navigating paths but simulate not being able to see well (e.g. move to node position +/- random vector offset based on difficulty?)
 
-general - #backpack #techdebt - retire hacked player and backpack cogs - Assuming another solution can be found to replace the bot score hack in kyle.cog, I believe it is possible to use the vanilla kyle.cog and pow_backpack.cog files, and to use rbot-backpack.cog for only the backpacks dropped by bots (bot srv cogs can handle force fx on player just like dark jedi cogs do, no skill trigger hacks needed)
 general - #backpack - refactor backpack cogs to store more backpacks (see branch 'more-backpack-slots' for 20 slot expansion, which works but is very close to the symbol limit and won't allow addition of MotS inventory slots to the backpack); one possibility is to use the heap verbs; alternatively, compress the data so it can be contained in fewer variables (e.g. bit mask for weapon possession, perhaps encode multiple ammo counts in a single int, etc.)
 
 general - #techdebt - refactor cog ref arrays to linked list iteration (startup/srv?, admin/srv?, nav/bot node slots)
@@ -40,20 +91,18 @@ general - #weapons #lightsaber - make bot sometimes wait between saber swings to
 
 general - #scoring - when score limit is set, match does not end until player reaches the score limit and then dies. Note: player score must not go below the limit as a result of dying. For example, if the player reaches the limit and then gets a suicide, the score is reduced to limit-1 and the match doesn't end. However, if the player reaches the limit and then gets killed by a bot, the game counts it as a suicide and reduces the score, but the startup cog corrects this and returns the player score to the limit, so the match will end. Note: CTF correctly ends when score limit is reached. CTF uses jkEndLevel(1) to end the level after displaying scores.
 
-general - #techdebt refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead)
+general - #techdebt refactor startup cog to not create bot spawn point things (i.e. retire rbot_respawn template) so we don't needlessly consume up to 32 thing refs (we can use vectors, sectors, etc. instead); update: keep in mind that we would need at least THREE symbols per respawn location - the sector, the pos vector, and the lvec vector
 general - creating a thing at bot's next location / item / target enables monitoring within botcam and also to "highlight" multiple items concurrently. The infrastructure for this is already present now because of the node removal feature
 general - some nodes are too high in existing maps (including nar=DONE, bes, spaceport=DONE, TBD)
-
-general - #navigation - capture touched message for temporary node thing to detect when bot reaches the node. This will help prevent a bot missing small nodes because of passing through them between AI pulses. Update: Testing and code inspection suggest that the default mask flags may prevent this from working.
 
 general - #navigation - path changing - pick fairly even when multiple intersections are from a single path (e.g. path starts and ends with same node, or node occurs multiple times in the path)
 general - #navigation - lost bot - if a lost bot is nearest the node that starts and ends a looping path, the bot will always run forward on the path. I believe this is because the nav cog skips over the currently-saved candidate node instead of randomly choosing from among the "duplicate" choices. I think the logic could be altered so when the current candidate node is encountered again in another path/node index, then it can do a random check to swap the new instance with the saved instance. This can be a fair check like the intersection path change check (1 in N+1 chance to select a path at an N-way intersection)
 general - #navigation #improvement - navigate paths more intelligently to find desired powerups (instead of wandering randomly)
-general - #navigation #feature - allow paths to be weighted. The weight factor adjusts how likely a bot is to pick a particular path. If weight <= 0, ignore path; otherwise, chance = weight / (weight + otherweight) ? (check the math, make sure it maintains fair path selection)
 general - #navigation - path cog: refactor unidirectional, nonlooping into path flags (like original release) but allow setting/clearing flags in the same way as enabling/disabling a path (suggested flags: 0x1/non-looping, 0x2/cannot run forward on path, 0x4/cannot run backward on path. Disabled = 0x6 = 0x2 + 0x4, or is there a reason we would need a dedicated flag?)
 general - #navigation #arrival #improvement - review default 30 second arrival timeout; this might be too long for the usual case. Should it be 10.0 or 20.0 instead?
 general - #navigation #arrival #bug - arrival cog attempts to generate duplicate/redundant arrival events when same arriver is used in multiple slots. I think what is happening is, when the arriver is used in multiple slots, the game will send multiple arrived messages to the cog, one for each slot where the arriver is used, because of the arriver being a linked symbol passed in from the JKL. For example, elevators often use two slots, one for the bottom floor, and the other for the top floor, so the arrival cog would receive two arrived messages. Fortunately, what would be redundant arrival events are suppressed thanks to the waiting0-9 vars (i.e. the first event gets sent while waitingX is 1, but sending the event sets waitingX to 0, so the second event gets suppressed). The good news is, even if the events weren't suppressed, they are still technically correct for the situation (just redundant), so no unexpected side effects should occur other than redundant triggers being sent.
 
+general - should bots play shield hit sound fx? (YES); absorb sound fx? (YES); do they do it now? (shields NO, absorb YES) -- so, bots need to be fixed to play shield hit sound when taking damage
 general - bot shields do not function exactly like player shields - at 50 shields, damage starts to be split between shields and health for players, but for bots, the shields must be depleted completely before the bot will start taking health damage. See TODO in rbot-srv.cog
 general - make bot pit death behave more like player - player will fade to black and respawn, but buts will kill themselves and continue falling until the 5 second respawn timer elapses. Note that a player does, in fact, drop a backpack even when killed in a pit with screen fade death.
 general - #techdebt does the bot pit check need to be its own timer? could it just be part of the ordinary AI pulse? Are there other periodic timers that could also be refactored this way?
@@ -95,13 +144,11 @@ general - #weapons - simulate player reaction time (random delay to start firing
 general - #powerups - additional powerups that could be supported: stbp, lightsaber, goggles, battery
 general - #powerups - add ability to pickup rbacta (e.g. in freezer), st backpack (e.g. in spaceport), etc. powerups
 
-general - #techdebt - following srv-weapons refactoring, srv move procedure may now allow bots to move when they shouldn't be able to (e.g. gripped, awaiting event)
+general - #techdebt - following srv-weapons refactoring, srv move procedure may now allow bots to move when they shouldn't be able to (e.g. gripped, awaiting event) - dodge procedure should only run if the bot is not frozen/waiting in place
 general - #techdebt - there is at least one edge case where the bot may get stuck awaiting an event indefinitely. For example, in challenge, teleport the bot into the elevator shaft leading up to the gold base. If the bot has an arrival_event set, he will wait at the node for the elevator to reach frame 1. Normally, this would time out and the bot would continue on his way, but if he starts seeking a powerup while holding position waiting for the event, then the bot will remain indefinitely stuck because the bot lost timer is being reset by the item seeking. Unsure if the problem can be reproduced without the rbot-admin-teleport function.
 
 general - #techdebt - srv-force recalculates rank and jedirank on demand; adjust to recalculate in trigger to save on if statement limit count
 general = #techdebt - consider changing cog discovery trigger ID to "rbots" magic number (82687)
-
-general - #feature #special - add special(?) flag to make bot use lightsaber to slash open a grate
 
 general - #techdebt - check for duplicate bot names (I see 4 duplicates in mots/kfy. Haven't checked jk/ctf); -- example command: grep -o "botname:int=[0-9]*" temple-1.jed | gsort | uniq -c
 
@@ -116,23 +163,17 @@ ctf/kfy - #bug - return timer isn't cancelled when a dropped flag/ysalamiri is p
 
 ctf/kfy - #improvement - simulate the bot being able to hear that a flag/ysalamiri is nearby to better replicate actual player behavior. e.g. something like if < 1.0 JKU away and HasLOS, make bot turn to face the item so he doesn't inadvertently miss the item and run away without it. For example, bot dies beside doorway, so flag is out of view for bots that are coming through the doorway, then the bot doesn't try to get the item  after coming through the doorway because it is now behind him and he doesn't see it. A real player would likely hear it and recognize that they are right next to it and turn around, especially in KFY with the distinctive ysalamiri chirping.
 
-	TODO kfy - force power bubbles support
-
 	TODO why do bots seem to frequently die in a glitchy walking anim instead of playing death anim when force grip etc are used to kill them?
 
 mots - #weapons - implement flash bomb use in mots
-mots - #techdebt - cog cleanup, check for and remove unused (e.g. rbot tdets nar cog?)
 mots - feature: in team play, use personality skins, not just kyle team skins
 mots - #forcepowers - additional force powers support (powers not yet supported by rbots are still handled in the player cog skill message)
-mots - #forcepowers - force bubble handling (this is mainly for KFY, but it is technically a general MotS function and not inherently KFY-specific)
 mots - #feature - personaolity support (weapons, force powers, etc.). The 0x1000 MP mode flag can be checked to reliably determine whether MotS personalities are in use or not (0x1000 will be set if personalities are NOT being used)
 mots - #weapons - looks like mots always lets you pick up gun powerups even if you have the gun and full ammo already? JK is conditional. Make bots do the same?
 
 duel - bots try to walk through force fields - maybe we can adjust paths and disable segments going through doorways when force fields are active?
 duel - polish the paths to maximize map coverage
 duel - #navigation - bots reverse direction in the duel map when capturing flag. Is this due to ctf pathinfo calc reversing path direction to other base? i.e. bot runs up to flag, then reverses direction and goes back down the way he came from, rather than continuing to run forward.
-
-arena - teach the bots how to get to the raildet and concrifle secret areas (could probably teach the bots how to get the revive in the lower area too, but this might be more complicated than it's worth)
 
 challenge - for some reason, the SAS doors don't always work for bots (gold side colored SAS has issues - red side colored SAS also has issues - need to confirm other cases)
 challenge - bots will get stuck in the elevator shaft leading up to the gold base, probably from multiple bots awaiting arrival of the elevator and both attempting to enter the shaft when it arrives (first bot gets on elevator, second bot falls into shaft). The bot is unable to get out of the shaft in most cases, blocking the elevator from arriving for other bots.
@@ -142,7 +183,6 @@ challenge - #navigation #improvement - could improve the fan puzzle cog to not r
 bes - #traps - bots don't use the force field trap
 bes - #navigation - bots can now use crouching to go under the lower level platform
 
-nar - #powerups #improvement - bots try to walk through the force field and can pick up powerups through the force field. Could this be resolved by using a customizer cog to handle pickup of these powerups?  That is, could a zone-like mechanism be used in combination with the force field state to decide whether to permit the pickup?
 nar - #traps #improvement - activate turret trap more purposefully (right now it's just piggybacking on the trigger to open the force field)
 
 oasis - #navigation #improvement #techdebt - some paths can be combined into longer paths (they are split because of old nav cog limitations), some unidirectional paths can probably be adjusted for bidirectional navigation
@@ -165,8 +205,6 @@ palace - #addbotsupport - add support for bots
 
 reactor - #addbotsupport - add support for bots
 
-vaporator - #improvement #navigation - add path to let bot slash the grate on the top floor and crouch in to get the scope (requires implementation of grate slashing and crouching capabilities for bots)
-
 cargo - #addbotsupport - add support for bots
 
 homestead - #addbotsupport - add support for bots
@@ -176,7 +214,6 @@ gantry - #navigation - bots will jump off the platform outside the building, imp
 spaceport - #navigation - implement paths to currently unreachable areas (e.g. sniper window, top of moldy crow) and add alternate paths (e.g. drop down from concrifle room, cantina balcony) and hidden powerups (e.g. power boost)
 spaceport - #navigation - is there a spawn point in the lightsaber chapel room that has no LOS with path nodes? Seems like bots sometimes spawn in there but are lost at first until they wander into the middle of the room.
 spaceport - #navigation - bots don't see the seeker charges in the upper room
-spaceport - #navigation - bots should ignore some powerups, including railcharges by the stack of crates
 
 bespin - #addbotsupport - add support for bots (note: improve freezer and gantry as much as possible before implementing bespin to reduce duplicated effort)
 
@@ -313,3 +350,5 @@ general - when bots use force persuasion, player cannot see them (except on over
 general - #weapons #lightsaber - is there any way (e.g. a weapon flag) to tweak the +rbotsaber template so the game's saber engine will auto-block it, instead of needing custom block/damage code in damaged: messages?
 
 general - #weapons #lightsaber - any way to fix it so we create flesh sparks instead of wall sparks after actor/player is dead? (i.e. the 0x200 thing flag prevents damaged from running and ParseArg'ing the template, can we fix this?) (see notes in rbot-player.cog and rbot-srv-weapons.cog)
+
+general - #navigation - capture touched message for temporary node thing to detect when bot reaches the node. This will help prevent a bot missing small nodes because of passing through them between AI pulses. Update: Testing and code inspection suggest that the default mask flags may prevent this from working. Update 2: Actually, class cogs and capture cogs receive all messages for their associated things and mask flags do not filter anything out. I believe the issue is actually that there is no collision handler for ghost/cog/actor collisions so no touched message gets sent at all for an actor colliding with ghost/cog thing types. There is also only a collision handler for player/item collisions but not actor/item collisions, which is why the bots are unable to touch the CTF flags with an ordinary touched messages. Can weapon type collision be used somehow? Update: Initial testing of weapon type collision is not promising. I haven't found a way to detect bot/weapon collision without obstructing bot movement/displacing the node thing or causing damage to the bot (some of the collision code only runs if damage > 0). So, there may not be a feasible solution for this.

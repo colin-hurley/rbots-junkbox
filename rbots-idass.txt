@@ -6,7 +6,7 @@ Some of these items are simply ramblings and thoughts that I wish to hold onto f
 
 caesars - bots fall down jedigreedo glass elev shaft - seem to "force jump" sbx-style in midair on the way down, so no fall damage taken (I suspect the bot is trying to "jump" over an obstruction) -- update: 2022-09-30 - cannot reproduce, is this still an issue?
 caesars - bot gets trapped in elevator shaft below jedigreedo room, doesn't try to jump out of shaft, keeps trying to jump/go up to top of shaft
-caesars - bots try to attack each other through glass
+caesars - bots try to attack each other through glass -- update: 2024-11-11 - should be resolved by recent non-passable adjoin LOS checks added to srv cog
 caesars - pathing around corner past kitchen ramp to elevator on casino floor is rough
 caesars - bot going down waterfall was lookup up at the rooftop bridge thing - was he looking at an enemy or the repeater/power cells?  he wasn't shooting at the time
 caesars - more casino area paths
@@ -26,48 +26,152 @@ general - #misc - when player respawns, consider disabling that respawn point fo
 general - #special #revisit - refine bot activation trigger with a means to direct the message to a specific cog? Perhaps with a param that the cog would understand (e.g. which button was pushed, desired enable/disable state for a trap, etc.). Update: This may be needlessly generic. rbot-elev-call.cog was much easier to implement with just specifying the nodes it needs and letting it worry about the map state logic, rather than trying to make a generic conditional activate trigger. It may be worthwhile to abandon the activate trigger and just model the other cogs after rbot-elev-call.cog and rbot-door-switch.cog going forward.
 general - #special #revisit - refine bot special info to accept parameters to customize behavior (e.g. jump height scale for precision jumping). Update: It may be worthwhile to move these sort of special behaviors to dedicated action cogs (e.g. make a new cog named rbot-jump.cog or something), or fold into the cog that knows the conditions (e.g. rbot-elev-call.cog) rather than trying to roll a generic special cog for all special actions.
 	examples:
+		# Activation:
+		#   bot reaches node
+		#   running in expected direction
+		#   wait for delay
+		# Effects:
+		#   Jump (scale the jump vector according to the scale parameter)
 		rbot-jump.cog
 			thing node=-1 nolink
 			int rundir=-1
 			flex delay=0.0
 			flex scale=1.0
 
-		rbot-dropmine.cog
+		# Activation:
+		#   bot reaches node
+		#   running in expected direction
+		#   random chance
+		#   wait for delay
+		# Effects:
+		#   Drop a mine
+		rbot-dropmine.cog / rbot-mine-placement.cog / rbot-mine.cog / rbot-placemine.cog
 			thing node=-1 nolink
 			int rundir=-1
 			flex delay=0.0
 			flex chance=1.0
 
-		rbot-slashgrate.cog (or rbot-grate.cog?)
-			surface grate=-1
-			surface grateback=-1
+		# Activation:
+		#   bot reaches node
+		#   running in expected direction
+		#   random chance
+		#   wait for delay
+		#   grate is -1 or is not passable (solid)
+		# Deactivation:
+		#   grate adjoin is not -1 and is now passable (not solid)
+		#   bot dead/disabled
+		#   duration has elapsed (also handles the grate == -1 case)
+		# Effects:
+		#   Use saber
+		#   ignore targets/items
+		#   face grate surface center (or maybe 1 JKU behind it?)
+		#   keep slashing saber
+		#   periodically check for deactivation conditions in timer
+		# Notes:
+		#   Add one instance for each direction (i.e. not one instance for both sides of grate)
+		rbot-slashgrate.cog / rbot-grate.cog
+			surface grate=-1 nolink
 			thing node=-1 nolink
-			thing nodeback=-1 nolink
 			int rundir=-1
-			int rundirback=-1
+			flex delay=0.0
+			flex duration=5.0
+			flex chance=1.0
 
+		# Activation:
+		#   bot reaches node
+		#   running in expected direction
+		#   random chance
+		#   wait for delay
+		#   switch is not -1 and switch cel == switchcel
+		# Deactivation:
+		#   switch cel != switchcel
+		#   bot dead/disabled
+		#   duration has elapsed
+		# Effects:
+		#   Use gun with solid projectiles (i.e. not carb gun) + prefer laser weapons
+		#   ignore targets/items
+		#   face switch surface center (or maybe 1 JKU behind it?)
+		#   keep firing gun
+		#   periodically check for deactivation conditions in timer
+		rbot-shootswitch.cog
+			surface switch=-1 nolink
+			int switchcel=0
+			thing node=-1 nolink
+			int rundir=-1
+			flex delay=0.0
+			flex duration=5.0
+			flex chance=1.0
+
+		# Activation:
+		#   bot reaches one of the nodes
+		#   running in expected direction
+		#   wait for delay
+		# Deactivation:
+		#   duration has elapsed
+		# Effects:
+		#   Crouch
 		rbot-crouch.cog
 			thing node0..3=-1 nolink
 			int rundir=-1
 			flex delay=0.0
 			flex duration=3.0
+		# Activation:
+		#   bot enters one of the sectors
+		#   running in expected direction
+		# Deactivation:
+		#   bot exits the sector
+		# Effects:
+		#   Crouch
 		rbot-crouch-sector.cog
 			sector sc0..3=-1 mask=0x404
 			int rundir=-1
+		# Activation:
+		#   bot enters one of the surfaces
+		#   running in expected direction
+		# Deactivation:
+		#   bot exits the surface
+		# Effects:
+		#   Crouch
+		# Notes:
+		#   No adjoin crossing support (add rbot-*-adjoin.cog if needed, but can probably just use the node thing version of the cog)
 		rbot-crouch-surface.cog
 			surface sf0=-1 mask=0x404
 			int rundir=-1
 
+		# Activation:
+		#   bot reaches one of the nodes
+		#   running in expected direction
+		#   wait for delay
+		# Deactivation:
+		#   duration has elapsed
+		# Effects:
+		#   Scale movement speed
 		rbot-movespeed.cog
 			thing node0..3=-1 nolink
 			int rundir=-1
 			flex delay=0.0
 			flex duration=3.0
 			flex scale=1.0
+		# Activation:
+		#   bot enters one of the sectors
+		#   running in expected direction
+		# Deactivation:
+		#   bot exits the sector
+		# Effects:
+		#   Scale movement speed
 		rbot-movespeed-sector.cog
 			sector sc0..3=-1 mask=0x404
 			int rundir=-1
 			flex scale=1.0
+		# Activation:
+		#   bot enters one of the surfaces
+		#   running in expected direction
+		# Deactivation:
+		#   bot exits the surface
+		# Effects:
+		#   Scale movement speed
+		# Notes:
+		#   No adjoin crossing support (add rbot-*-adjoin.cog if needed, but can probably just use the node thing version of the cog)
 		rbot-movespeed-surface.cog
 			surface sf0..3=-1 mask=0x404
 			int rundir=-1
@@ -101,8 +205,8 @@ general - #navigation #improvement - navigate paths more intelligently to find d
 general - #navigation - path cog: refactor unidirectional, nonlooping into path flags (like original release) but allow setting/clearing flags in the same way as enabling/disabling a path (suggested flags: 0x1/non-looping, 0x2/cannot run forward on path, 0x4/cannot run backward on path. Disabled = 0x6 = 0x2 + 0x4, or is there a reason we would need a dedicated flag?)
 general - #navigation #arrival #improvement - review default 30 second arrival timeout; this might be too long for the usual case. Should it be 10.0 or 20.0 instead?
 general - #navigation #arrival #bug - arrival cog attempts to generate duplicate/redundant arrival events when same arriver is used in multiple slots. I think what is happening is, when the arriver is used in multiple slots, the game will send multiple arrived messages to the cog, one for each slot where the arriver is used, because of the arriver being a linked symbol passed in from the JKL. For example, elevators often use two slots, one for the bottom floor, and the other for the top floor, so the arrival cog would receive two arrived messages. Fortunately, what would be redundant arrival events are suppressed thanks to the waiting0-9 vars (i.e. the first event gets sent while waitingX is 1, but sending the event sets waitingX to 0, so the second event gets suppressed). The good news is, even if the events weren't suppressed, they are still technically correct for the situation (just redundant), so no unexpected side effects should occur other than redundant triggers being sent.
+general - #navigation - consider allowing easy/novice/difficulty=1 to look for items very close to the path (<0.5 JKU in x/y dist? and <0.2 JKU in z dist?) - this may allow a bit more freedom in placing path nodes (i.e. can place the node appropriately in the middle of the walkway and not need to worry about it needing to be close enough to nearby items for the bots to pick them up)
 
-general - should bots play shield hit sound fx? (YES); absorb sound fx? (YES); do they do it now? (shields NO, absorb YES) -- so, bots need to be fixed to play shield hit sound when taking damage
 general - bot shields do not function exactly like player shields - at 50 shields, damage starts to be split between shields and health for players, but for bots, the shields must be depleted completely before the bot will start taking health damage. See TODO in rbot-srv.cog
 general - make bot pit death behave more like player - player will fade to black and respawn, but buts will kill themselves and continue falling until the 5 second respawn timer elapses. Note that a player does, in fact, drop a backpack even when killed in a pit with screen fade death.
 general - #techdebt does the bot pit check need to be its own timer? could it just be part of the ordinary AI pulse? Are there other periodic timers that could also be refactored this way?
@@ -112,7 +216,7 @@ general - #forcepowers - implement rank-based mana cap for bots (similar to play
 
 general - #weapons - implement thermal detonator use
 general - #weapons - implement sequencer charge use; when special info arrives, set flag so at next invocation of attacktarget, bot will switch to sequencer charges and lay a mine at the earliest opportunity (like setting the jump flag in rbot-srv.cog when bot is in the air and receives jump special info).
-general - #weapons - (possibly unfixable) when bot dies, it gets a new thing number - mines, etc. created before the bot respawn will not score the bot points.
+general - #weapons - (possibly unfixable) when bot dies, it gets a new thing number - mines, etc. created before the bot respawn will not score the bot points. Update: This could maybe be worked around by setting a timer after bot death but before respawn, that will fire after respawn, to update the parent of the placed mines (either with SetThingParent or recreate and use setlifeleft). However, since mines only live for 60 seconds anyway and then explode, this may not be a super important thing to address.
 general - #weapons #techdebt - clean up weapon/ammo powerup priority checks.  (1) reduce redundancy/verbosity of if statements (e.g. instead of "(!weapX && GetThingTemplate(...) == tmp_weapx) || (!weapx && GetThingTemplate(...) == tmp_fpweapx) || ...", try "(!weapx && (GetThingTemplate(...) == tmp_weapx || GetThingTemplate(...) == tmp_fpweapx)) || ..."). (2) add weapon powerups to ammo template checks (i.e. if bot needs carbonite ammo, check for both the gun and the ammo powerups, not just the ammo powerup)
 general - #weapons - simulate player reaction time (random delay to start firing upon spotting a target, lower difficulties have longer possible delay, higher difficulties react more quickly)
 	proposed logic
@@ -144,7 +248,7 @@ general - #weapons - simulate player reaction time (random delay to start firing
 general - #powerups - additional powerups that could be supported: stbp, lightsaber, goggles, battery
 general - #powerups - add ability to pickup rbacta (e.g. in freezer), st backpack (e.g. in spaceport), etc. powerups
 
-general - #techdebt - following srv-weapons refactoring, srv move procedure may now allow bots to move when they shouldn't be able to (e.g. gripped, awaiting event) - dodge procedure should only run if the bot is not frozen/waiting in place
+general - #techdebt - following srv-weapons refactoring, srv move procedure now allows bots to move when they shouldn't be able to (e.g. gripped, awaiting event) - dodge procedure should only run if the bot is not frozen/waiting in place
 general - #techdebt - there is at least one edge case where the bot may get stuck awaiting an event indefinitely. For example, in challenge, teleport the bot into the elevator shaft leading up to the gold base. If the bot has an arrival_event set, he will wait at the node for the elevator to reach frame 1. Normally, this would time out and the bot would continue on his way, but if he starts seeking a powerup while holding position waiting for the event, then the bot will remain indefinitely stuck because the bot lost timer is being reset by the item seeking. Unsure if the problem can be reproduced without the rbot-admin-teleport function.
 
 general - #techdebt - srv-force recalculates rank and jedirank on demand; adjust to recalculate in trigger to save on if statement limit count
@@ -170,6 +274,7 @@ mots - feature: in team play, use personality skins, not just kyle team skins
 mots - #forcepowers - additional force powers support (powers not yet supported by rbots are still handled in the player cog skill message)
 mots - #feature - personaolity support (weapons, force powers, etc.). The 0x1000 MP mode flag can be checked to reliably determine whether MotS personalities are in use or not (0x1000 will be set if personalities are NOT being used)
 mots - #weapons - looks like mots always lets you pick up gun powerups even if you have the gun and full ammo already? JK is conditional. Make bots do the same?
+mots - #weapons - consider: blastech charge mode, if charged, do not fire until target is closer (i.e. if charged, try to wait until closer range before firing the charged shot)
 
 duel - bots try to walk through force fields - maybe we can adjust paths and disable segments going through doorways when force fields are active?
 duel - polish the paths to maximize map coverage
@@ -196,7 +301,11 @@ freezer - bots sometimes/often can't properly ride the rising air by the elevato
 freezer - #traps - teach bots to activate the carbonite pit trap
 freezer - #weapons - add support for npconcrifle powerup in carbonite freezing chamber
 
-canopy - #addbotsupport - add support for bots
+
+TODO bot stops randomly while running straight - I think that's because of the sharp turn stop while seeking an item
+TODO bot with carb gun runs away from frozen target if low on health
+TODO when bot gets hit with a placed mine, he will look toward the attacker even if the attacker is nowhere near the area -- maybe add a LOS check before setting the attacker field?
+
 
 palace - #addbotsupport - add support for bots
 	templates for customizer cog:
